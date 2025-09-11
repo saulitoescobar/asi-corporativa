@@ -23,14 +23,7 @@ npm install
 npm start
 ```
 
-Crear `backend/.env`:
-```env
-DB_HOST=localhost
-DB_PORT=3333
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=asicorporativa
-```
+Configurar variables de entorno en `backend/.env` (ver documentación).
 
 ## Módulos
 - Usuarios
