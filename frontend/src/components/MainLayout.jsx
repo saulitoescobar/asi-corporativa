@@ -8,6 +8,7 @@ import {
   CreditCardOutlined,
   TeamOutlined,
   ContactsOutlined,
+  SolutionOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
@@ -18,6 +19,7 @@ const items = [
   { key: '/lines', icon: <PhoneOutlined />, label: 'Líneas' },
   { key: '/telcos', icon: <GlobalOutlined />, label: 'Telcos' },
   { key: '/companies', icon: <BankOutlined />, label: 'Empresas' },
+  { key: '/legal-representatives', icon: <SolutionOutlined />, label: 'Representantes Legales' },
   { key: '/plans', icon: <CreditCardOutlined />, label: 'Planes' },
   { key: '/positions', icon: <TeamOutlined />, label: 'Posiciones' },
   { key: '/advisors', icon: <ContactsOutlined />, label: 'Asesores' },

@@ -26,6 +26,7 @@ db.Plan = require('./Plan')(sequelize, DataTypes);
 db.Advisor = require('./Advisor')(sequelize, DataTypes);
 db.Telco = require('./Telco')(sequelize, DataTypes);
 db.Line = require('./Line')(sequelize, DataTypes);
+db.LegalRepresentative = require('./LegalRepresentative')(sequelize, DataTypes);
 
 // Asociaciones (definir después de todos los modelos)
 // Usuarios ↔ Companies, Positions
@@ -33,6 +34,16 @@ db.User.belongsTo(db.Company, { foreignKey: 'company_id', as: 'company' });
 db.User.belongsTo(db.Position, { foreignKey: 'position_id', as: 'position' });
 db.Company.hasMany(db.User, { foreignKey: 'company_id', as: 'users' });
 db.Position.hasMany(db.User, { foreignKey: 'position_id', as: 'users' });
+
+// Companies ↔ Legal Representatives
+db.Company.hasMany(db.LegalRepresentative, { 
+  foreignKey: 'companyId', 
+  as: 'legalRepresentatives' 
+});
+db.LegalRepresentative.belongsTo(db.Company, { 
+  foreignKey: 'companyId', 
+  as: 'company' 
+});
 
 // Telcos ↔ Advisors
 db.Advisor.belongsTo(db.Telco, { foreignKey: 'telco_id', as: 'telco' });

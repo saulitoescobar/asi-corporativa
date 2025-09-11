@@ -8,6 +8,13 @@ console.log('Companies route loaded');
 router.get('/', async (req, res) => {
   try {
     const companies = await db.Company.findAll({
+      include: [{
+        model: db.LegalRepresentative,
+        as: 'legalRepresentatives',
+        where: { isActive: true },
+        required: false,
+        attributes: ['id', 'firstName', 'lastName', 'cui', 'profession', 'startDate']
+      }],
       order: [['id', 'ASC']]
     });
     res.json(companies);
@@ -20,7 +27,15 @@ router.get('/', async (req, res) => {
 // Obtener empresa por ID desde DB
 router.get('/:id', async (req, res) => {
   try {
-    const company = await db.Company.findByPk(req.params.id);
+    const company = await db.Company.findByPk(req.params.id, {
+      include: [{
+        model: db.LegalRepresentative,
+        as: 'legalRepresentatives',
+        where: { isActive: true },
+        required: false,
+        attributes: ['id', 'firstName', 'lastName', 'cui', 'profession', 'startDate']
+      }]
+    });
     if (!company) {
       return res.status(404).json({ error: 'Empresa no encontrada' });
     }

@@ -26,6 +26,7 @@ const companiesRouter = require('./routes/companies');
 const plansRouter = require('./routes/plans');
 const positionsRouter = require('./routes/positions');
 const advisorsRouter = require('./routes/advisors');
+const legalRepresentativesRouter = require('./routes/legalRepresentatives');
 
 app.use('/api/lines', linesRouter);
 app.use('/api/users', usersRouter);
@@ -34,6 +35,7 @@ app.use('/api/companies', companiesRouter);
 app.use('/api/plans', plansRouter);
 app.use('/api/positions', positionsRouter);
 app.use('/api/advisors', advisorsRouter);
+app.use('/api/legal-representatives', legalRepresentativesRouter);
 
 // Conectar a la base de datos y luego iniciar servidor
 const db = require('./models');

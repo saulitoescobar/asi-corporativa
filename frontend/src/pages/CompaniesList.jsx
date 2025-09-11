@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Typography, Spin, Alert, Button, Modal, Form, Input, DatePicker, message, Popconfirm, Space } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
+import { Table, Typography, Spin, Alert, Button, Modal, Form, Input, message, Popconfirm, Space } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
 const { TextArea } = Input;
 
 const CompaniesList = () => {
+  const navigate = useNavigate();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -134,24 +135,55 @@ const CompaniesList = () => {
       width: 120,
     },
     {
-      title: 'Representante Legal',
-      dataIndex: 'legalRepresentative',
-      key: 'legalRepresentative',
-      width: 180,
-    },
-    {
-      title: 'Vigencia Rep. Legal',
-      dataIndex: 'legalRepresentationValidity',
-      key: 'legalRepresentationValidity',
-      width: 140,
-      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '-',
+      title: 'Representantes Legales',
+      key: 'legalRepresentatives',
+      width: 250,
+      render: (_, record) => {
+        if (record.legalRepresentatives && record.legalRepresentatives.length > 0) {
+          return (
+            <div>
+              {record.legalRepresentatives.map((rep, index) => (
+                <div key={rep.id} style={{ 
+                  marginBottom: index < record.legalRepresentatives.length - 1 ? '6px' : '0',
+                  padding: '4px 0',
+                  borderBottom: index < record.legalRepresentatives.length - 1 ? '1px solid #f0f0f0' : 'none'
+                }}>
+                  <div style={{ fontWeight: 500, fontSize: '13px' }}>
+                    {rep.firstName} {rep.lastName}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#666' }}>
+                    {rep.profession}
+                  </div>
+                </div>
+              ))}
+              {record.legalRepresentatives.length > 1 && (
+                <div style={{ 
+                  fontSize: '11px', 
+                  color: '#1890ff', 
+                  marginTop: '4px',
+                  fontWeight: 500
+                }}>
+                  {record.legalRepresentatives.length} representantes activos
+                </div>
+              )}
+            </div>
+          );
+        }
+        return <span style={{ color: '#999', fontStyle: 'italic' }}>Sin representantes activos</span>;
+      },
     },
     {
       title: 'Acciones',
       key: 'actions',
-      width: 120,
+      width: 150,
       render: (_, record) => (
         <Space size="small">
+          <Button
+            icon={<EyeOutlined />}
+            size="small"
+            onClick={() => navigate(`/companies/${record.id}`)}
+            title="Ver detalle"
+          />
           <Button
             type="primary"
             icon={<EditOutlined />}
@@ -247,27 +279,6 @@ const CompaniesList = () => {
             ]}
           >
             <Input placeholder="Ingrese el teléfono" />
-          </Form.Item>
-
-          <Form.Item
-            name="legalRepresentative"
-            label="Representante Legal"
-            rules={[
-              { max: 100, message: 'El nombre no puede exceder 100 caracteres' }
-            ]}
-          >
-            <Input placeholder="Ingrese el nombre del representante legal" />
-          </Form.Item>
-
-          <Form.Item
-            name="legalRepresentationValidity"
-            label="Vigencia de la Representación Legal"
-          >
-            <DatePicker 
-              style={{ width: '100%' }}
-              placeholder="Seleccione la fecha de vigencia"
-              format="DD/MM/YYYY"
-            />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
