@@ -2,15 +2,63 @@
 
 ## 📋 RESUMEN DEL PROYECTO
 
-**ASI CORPORATIVA** es un sistema web completo para la gestión y control de líneas telefónicas móviles corporativas. Permite administrar usuarios, empresas, planes, telcos, asesores y líneas telefónicas con sus respectivas relaciones y estados.
+**ASI CORPORATIVA** es un sistema web completo para la gestión y control de líneas telefónicas móviles corporativas. Permite administrar usuarios, empresas, planes, telcos, asesores, líneas telefónicas y **representantes legales** con sus respectivas relaciones y estados.
 
-## 🏗️ ARQUITECTURA DEL SISTEMA
+## � FUNCIONALIDAD DESTACADA: REPRESENTANTES LEGALES
+
+### Descripción General
+Sistema avanzado de gestión de representantes legales que soporta casos complejos del mundo empresarial real, donde los mismos representantes pueden actuar para múltiples empresas y tener períodos no continuos.
+
+### Características Principales
+
+#### ✅ Múltiples Representantes Activos
+- Una empresa puede tener **N representantes legales activos simultáneamente**
+- Eliminación de la restricción "un solo representante activo por empresa"
+- Ideal para empresas con múltiples firmas autorizadas
+
+#### ✅ Representación Multi-Empresa
+- **Mismo representante legal** puede actuar para **múltiples empresas**
+- Casos reales: abogados corporativos que representan varios clientes
+- Validación independiente por empresa
+
+#### ✅ Gestión de Períodos Históricos
+- **Períodos no continuos**: 2012-2015, luego 2018-2022
+- **Validación de solapamientos** dentro de la misma empresa
+- **Historial completo** de representación legal
+
+### Casos de Uso Implementados
+
+#### Caso 1: Multi-Empresa Simultánea
+```
+Juan Pérez (CUI: 1234567890101)
+├── Empresa ABC ✅ Activo (2023-presente)
+├── Compañía XYZ ✅ Activo (2023-presente)  
+└── Tecnología Avanzada ✅ Activo (2023-presente)
+```
+
+#### Caso 2: Períodos Históricos
+```
+Juan Pérez en Empresa ABC:
+├── Período 1: 2012-01-01 a 2015-12-31 ❌ Inactivo
+├── Período 2: 2016-01-01 a 2018-12-31 ❌ Inactivo
+└── Período 3: 2023-01-01 a presente ✅ Activo
+```
+
+#### Caso 3: Múltiples Activos por Empresa
+```
+Empresa ABC - Representantes Activos:
+├── Juan Pérez ✅ Abogado
+├── María García ✅ Abogada Corporativa
+└── Carlos Rodríguez ✅ Abogado Mercantil
+```
+
+## �🏗️ ARQUITECTURA DEL SISTEMA
 
 ### **Stack Tecnológico:**
 - **Frontend**: React 19.1.1 + Ant Design 5.27.3 + React Router 7.8.2
 - **Backend**: Node.js + Express 5.1.0 + Sequelize 6.37.7 ORM
 - **Base de Datos**: MySQL (puerto 3333 en XAMPP)
-- **Herramientas**: dotenv, cors, nodemon
+- **Herramientas**: dotenv, cors, nodemon, dayjs
 
 ### **Estructura de Directorios:**
 ```
@@ -19,34 +67,158 @@ asicorporativa/
 │   ├── config/
 │   ├── migrations/
 │   ├── models/
+│   │   ├── Company.js
+│   │   ├── LegalRepresentative.js ⭐ NUEVO
+│   │   └── [otros modelos]
 │   ├── routes/
+│   │   ├── companies.js
+│   │   ├── legalRepresentatives.js ⭐ NUEVO
+│   │   └── [otras rutas]
 │   ├── seeders/
 │   ├── .env
-│   ├── .sequelizerc
 │   ├── index.js
 │   └── package.json
 ├── frontend/
-│   ├── public/
-│   │   └── img/
-│   │       └── logo_site.svg
 │   ├── src/
 │   │   ├── components/
 │   │   │   └── MainLayout.jsx
 │   │   ├── pages/
-│   │   │   ├── UsersList.jsx
-│   │   │   ├── LinesList.jsx
-│   │   │   ├── TelcosList.jsx
-│   │   │   ├── CompaniesList.jsx
-│   │   │   ├── PlansList.jsx
-│   │   │   ├── PositionsList.jsx
-│   │   │   └── AdvisorsList.jsx
-│   │   ├── App.js
+│   │   │   ├── CompaniesList.jsx (actualizada)
+│   │   │   ├── CompanyDetail.jsx ⭐ NUEVO
+│   │   │   ├── LegalRepresentativesList.jsx ⭐ NUEVO
+│   │   │   └── [otras páginas]
+│   │   ├── App.js (actualizada)
 │   │   └── index.js
 │   └── package.json
-└── README.md
+└── README.md (actualizado)
 ```
 
 ## 🗄️ ESQUEMA DE BASE DE DATOS
+
+### Tabla: legal_representatives ⭐ NUEVA
+```sql
+CREATE TABLE legal_representatives (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  cui VARCHAR(50) NOT NULL,           -- Sin restricción unique
+  birth_date DATETIME NOT NULL,
+  profession VARCHAR(100),
+  company_id INT NOT NULL,
+  start_date DATETIME NOT NULL,
+  end_date DATETIME NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  
+  FOREIGN KEY (company_id) REFERENCES companies(id)
+);
+```
+
+### Relaciones Actualizadas
+```sql
+-- Relación uno a muchos
+companies (1) ←→ (N) legal_representatives
+
+-- Un representante puede estar en múltiples empresas
+-- Una empresa puede tener múltiples representantes activos
+```
+
+## 🚀 API ENDPOINTS
+
+### Legal Representatives ⭐ NUEVOS
+```
+GET    /api/legal-representatives              # Todos los representantes
+GET    /api/legal-representatives/:id          # Representante específico
+GET    /api/legal-representatives/company/:id  # Por empresa
+GET    /api/legal-representatives/company/:id/active # Activos por empresa
+POST   /api/legal-representatives              # Crear nuevo
+PUT    /api/legal-representatives/:id          # Actualizar
+DELETE /api/legal-representatives/:id          # Eliminar
+PATCH  /api/legal-representatives/:id/toggle-active # Activar/Desactivar
+```
+
+### Companies (actualizados)
+```
+GET    /api/companies                          # Incluye representantes activos
+GET    /api/companies/:id                      # Detalle con representantes
+```
+
+## 📱 COMPONENTES FRONTEND
+
+### 📄 LegalRepresentativesList.jsx ⭐ NUEVO
+- **Propósito**: Vista general de todos los representantes
+- **Funcionalidades**: CRUD completo, filtros, búsqueda
+- **Ruta**: `/representantes-legales`
+
+### 📄 CompanyDetail.jsx ⭐ NUEVO
+- **Propósito**: Vista detallada de empresa con gestión de representantes
+- **Funcionalidades**: Historial completo, agregar/editar períodos
+- **Ruta**: `/empresas/:id`
+
+### 📄 CompaniesList.jsx (actualizado)
+- **Mejora**: Columna "Representantes Legales" que muestra múltiples activos
+- **Funcionalidad**: Contador de representantes, navegación a detalle
+
+## ⚡ VALIDACIONES IMPLEMENTADAS
+
+### ✅ Campos Obligatorios
+- `firstName`, `lastName`, `cui`, `birthDate`
+- `profession`, `companyId`, `startDate`
+
+### ✅ Validación de Períodos
+```javascript
+// Previene solapamientos dentro de la misma empresa
+const conflictingPeriod = await LegalRepresentative.findOne({
+  where: {
+    cui,
+    companyId,
+    [Op.or]: [
+      // Período sin fecha fin que se solapa
+      {
+        endDate: null,
+        startDate: { [Op.lte]: endDate || new Date() }
+      },
+      // Período con fecha fin que se solapa
+      {
+        endDate: { [Op.not]: null },
+        [Op.and]: [
+          { startDate: { [Op.lte]: endDate || new Date() } },
+          { endDate: { [Op.gte]: startDate } }
+        ]
+      }
+    ]
+  }
+});
+```
+
+## � MIGRACIÓN DE DATOS LEGACY
+
+### Proceso Automático
+1. **Migración 20250911000004**: Crear tabla legal_representatives
+2. **Migración 20250911000005**: Migrar datos de companies.legalRepresentative
+3. **Script remove_unique_constraint.js**: Eliminar restricciones únicas del CUI
+
+## 📊 MÉTRICAS DEL PROYECTO
+
+### Implementación Representantes Legales
+- **Archivos Modificados**: 15
+- **Líneas de Código Añadidas**: 1,618
+- **Nuevos Componentes**: 2
+- **Nuevas Rutas API**: 7
+- **Validaciones Implementadas**: 5
+- **Casos de Uso Cubiertos**: 3
+
+### Módulos del Sistema
+- ✅ **Usuarios** - Gestión de usuarios del sistema
+- ✅ **Líneas** - Control de líneas móviles corporativas
+- ✅ **Telcos** - Operadores de telecomunicaciones
+- ✅ **Empresas** - Gestión completa de empresas cliente
+- ✅ **Planes** - Planes de servicios móviles
+- ✅ **Posiciones** - Cargos y posiciones empresariales
+- ✅ **Asesores** - Personal de atención al cliente
+- 🆕 **Representantes Legales** - Sistema completo de gestión legal
+
+**Última Actualización**: Septiembre 11, 2025  
+**Commit Actual**: `19f3215 - feat: múltiples representantes legales activos por empresa`
 
 ### **Tablas y Relaciones:**
 
