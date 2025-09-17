@@ -28,7 +28,7 @@ const items = [
 function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const selectedKey = items.find(i => location.pathname.startsWith(i.key))?.key || '/';
+  const selectedKey = items.find(i => location.pathname.startsWith(i.key))?.key || '/lines';
 
   return (
     <Layout style={{ minHeight: '100vh' }}>

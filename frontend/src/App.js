@@ -18,7 +18,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<UsersList />} />
+          <Route index element={<LinesList />} />
           <Route path="users" element={<UsersList />} />
           <Route path="lines" element={<LinesList />} />
           <Route path="telcos" element={<TelcosList />} />
