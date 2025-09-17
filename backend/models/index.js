@@ -30,10 +30,10 @@ db.LegalRepresentative = require('./LegalRepresentative')(sequelize, DataTypes);
 
 // Asociaciones (definir después de todos los modelos)
 // Usuarios ↔ Companies, Positions
-db.User.belongsTo(db.Company, { foreignKey: 'company_id', as: 'company' });
-db.User.belongsTo(db.Position, { foreignKey: 'position_id', as: 'position' });
-db.Company.hasMany(db.User, { foreignKey: 'company_id', as: 'users' });
-db.Position.hasMany(db.User, { foreignKey: 'position_id', as: 'users' });
+db.User.belongsTo(db.Company, { foreignKey: 'companyId', as: 'company' });
+db.User.belongsTo(db.Position, { foreignKey: 'positionId', as: 'position' });
+db.Company.hasMany(db.User, { foreignKey: 'companyId', as: 'users' });
+db.Position.hasMany(db.User, { foreignKey: 'positionId', as: 'users' });
 
 // Companies ↔ Legal Representatives
 db.Company.hasMany(db.LegalRepresentative, { 

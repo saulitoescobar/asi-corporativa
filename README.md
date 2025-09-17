@@ -1,4 +1,270 @@
-# ASI CORPORATIVA - Control de Líneas Corporativas Móviles
+# ASI Corporativa 🏢
+
+Sistema de gestión empresarial integral con frontend en React y backend en Node.js. Incluye funcionalidades avanzadas de CRUD, búsqueda tipo DataTables, vistas detalle y atajos de teclado.
+
+## 🚀 Características Principales
+
+- ✅ **CRUD Completo** - Crear, leer, actualizar y eliminar en todas las entidades
+- ✅ **Búsqueda Avanzada** - Filtros tipo DataTables con búsqueda en tiempo real
+- ✅ **Vistas Detalle** - Páginas detalladas para usuarios y telcos
+- ✅ **Atajos de Teclado** - Tecla F2 para crear nuevos registros
+- ✅ **Interfaz Moderna** - Diseño responsivo con Ant Design
+- ✅ **API REST** - Backend robusto con validaciones
+- ✅ **Base de Datos** - MySQL con relaciones optimizadas
+- ✅ **Setup Automático** - Scripts de instalación incluidos
+
+## 🛠️ Tecnologías
+
+### Frontend
+- **React 18** - Framework principal
+- **Ant Design** - Librería de componentes UI
+- **React Router** - Navegación SPA
+- **Axios** - Cliente HTTP
+- **React Hooks** - Estado y ciclo de vida
+
+### Backend
+- **Node.js** - Runtime de JavaScript
+- **Express.js** - Framework web
+- **Sequelize ORM** - Mapeo objeto-relacional
+- **MySQL** - Base de datos relacional
+- **mysql2** - Driver para MySQL
+
+## 📁 Estructura del Proyecto
+
+```
+asi-corporativa/
+├── 📂 frontend/                    # Aplicación React
+│   ├── 📂 src/
+│   │   ├── 📂 components/         # Componentes reutilizables
+│   │   │   └── MainLayout.jsx     # Layout principal
+│   │   ├── 📂 pages/              # Páginas principales
+│   │   │   ├── Dashboard.jsx      # Página de inicio
+│   │   │   ├── UsersList.jsx      # Lista de usuarios
+│   │   │   ├── UserDetail.jsx     # Detalle de usuario
+│   │   │   ├── CompaniesList.jsx  # Lista de empresas
+│   │   │   ├── CompanyDetail.jsx  # Detalle de empresa
+│   │   │   └── ...                # Otros módulos
+│   │   ├── 📂 hooks/              # Custom hooks
+│   │   │   └── useKeyboardShortcuts.js
+│   │   └── 📂 img/                # Imágenes
+│   └── package.json
+├── 📂 backend/                     # API REST
+│   ├── 📂 models/                 # Modelos Sequelize
+│   │   ├── User.js                # Modelo de usuarios
+│   │   ├── Company.js             # Modelo de empresas
+│   │   └── ...                    # Otros modelos
+│   ├── 📂 routes/                 # Rutas de la API
+│   ├── 📂 config/                 # Configuración
+│   ├── 📂 migrations/             # Migraciones de BD
+│   ├── 📂 seeders/                # Datos semilla
+│   └── package.json
+├── 📄 asi_corporativa_complete_export.sql  # Export completo de BD
+├── 📄 setup.sh                    # Script setup Linux/Mac
+├── 📄 setup.ps1                   # Script setup Windows
+├── 📄 SETUP_INSTRUCTIONS.md       # Instrucciones detalladas
+└── 📄 README.md
+```
+
+## ⚡ Instalación Rápida
+
+### Opción 1: Setup Automático (Recomendado)
+
+**Para Windows (PowerShell):**
+```powershell
+.\setup.ps1
+```
+
+**Para Linux/Mac:**
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+### Opción 2: Instalación Manual
+
+#### Prerrequisitos
+- Node.js 16+
+- MySQL 8.0+
+- Puerto 3307 disponible
+
+#### Pasos:
+
+1. **Clonar el repositorio**
+```bash
+git clone <repository-url>
+cd asi-corporativa
+```
+
+2. **Configurar base de datos**
+```sql
+CREATE DATABASE asicorporativa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+3. **Importar datos**
+```bash
+mysql -u root -p -P 3307 asicorporativa < asi_corporativa_complete_export.sql
+```
+
+4. **Configurar backend**
+```bash
+cd backend
+npm install
+```
+
+Crear archivo `.env`:
+```env
+DB_HOST=localhost
+DB_PORT=3307
+DB_USER=root
+DB_PASSWORD=root
+DB_NAME=asicorporativa
+PORT=3001
+```
+
+5. **Configurar frontend**
+```bash
+cd frontend
+npm install
+```
+
+## 🚀 Ejecución
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+npm start
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd frontend
+npm start
+```
+
+## 🌐 URLs
+
+- **Frontend:** http://localhost:3000
+- **Backend:** http://localhost:3001
+- **Base de Datos:** localhost:3307/asicorporativa
+
+## 📊 Módulos Disponibles
+
+| Módulo | Descripción | Registros Incluidos |
+|--------|-------------|-------------------|
+| 👥 **Usuarios** | Gestión de empleados | 3 usuarios |
+| 🏢 **Empresas** | Gestión de compañías | 2 empresas |
+| 📋 **Posiciones** | Cargos y puestos | 5 posiciones |
+| 📱 **Telcos** | Operadoras telefónicas | 2 telcos |
+| 👨‍💼 **Asesores** | Representantes comerciales | 2 asesores |
+| 📦 **Planes** | Planes telefónicos | 2 planes |
+| 📞 **Líneas** | Líneas telefónicas | Estructura lista |
+| ⚖️ **Representantes** | Gestión legal | 2 representantes |
+
+## ⌨️ Atajos de Teclado
+
+- **F2** - Crear nuevo registro en cualquier módulo
+- **Esc** - Cerrar modales
+- **Enter** - Confirmar formularios
+
+## 🎯 Funcionalidades Principales
+
+### 🔍 Búsqueda Avanzada
+- Búsqueda global en tiempo real
+- Filtros por columna
+- Paginación inteligente
+- Ordenamiento por cualquier campo
+
+### 👀 Vistas Detalle
+- **UserDetail:** Información completa del usuario, empresa, posición
+- **CompanyDetail:** Detalles de empresa, representantes legales
+- **TelcoDetail:** Información de operadora, planes disponibles
+
+### 📱 Interfaz Responsiva
+- Diseño adaptable a móviles
+- Tarjetas informativas con colores
+- Navegación intuitiva
+- Feedback visual en todas las acciones
+
+## 📈 Datos de Prueba Incluidos
+
+### 👥 Usuarios
+- **Juan Saúl Escobar Gaitán** (CUI: 2096757560613)
+- **María José Folgar Sandoval** (CUI: 1234567890123)
+- **Alfredo Jalal Pacay** (CUI: 2234567890123)
+
+### 🏢 Empresas
+- **Sistemas Integrales de Seguridad, S. A.** (NIT: 599191-9)
+- **Sistemas Globales de Seguridad, S. A.** (NIT: 3564805-8)
+
+### 📋 Posiciones
+- Gerente General
+- Desarrollador Senior
+- Analista de Sistemas
+- Soporte Técnico
+- Coordinador de Proyectos
+
+### 📱 Telcos y Planes
+- **CLARO Guatemala** - Ilimitado 20 GB (Q299.00)
+- **TIGO Guatemala** - Ilimitado 30 GB (Q399.00)
+
+## 🔧 API Endpoints
+
+### Usuarios
+- `GET /api/users` - Listar usuarios
+- `POST /api/users` - Crear usuario
+- `GET /api/users/:id` - Obtener usuario
+- `PUT /api/users/:id` - Actualizar usuario
+- `DELETE /api/users/:id` - Eliminar usuario
+
+### Empresas
+- `GET /api/companies` - Listar empresas
+- `POST /api/companies` - Crear empresa
+- `GET /api/companies/:id` - Obtener empresa
+- `PUT /api/companies/:id` - Actualizar empresa
+- `DELETE /api/companies/:id` - Eliminar empresa
+
+*Similar estructura para todos los módulos*
+
+## 🗄️ Estructura de Base de Datos
+
+### Relaciones Principales
+- `users` → `companies` (Muchos a Uno)
+- `users` → `positions` (Muchos a Uno)
+- `companies` → `legal_representatives` (Uno a Muchos)
+- `lines` → `telcos` (Muchos a Uno)
+- `lines` → `plans` (Muchos a Uno)
+- `lines` → `advisors` (Muchos a Uno)
+
+## 🛡️ Características Técnicas
+
+### Seguridad
+- Validación de datos en frontend y backend
+- Sanitización de inputs
+- Manejo de errores robusto
+
+### Performance
+- Paginación eficiente
+- Índices optimizados
+- Lazy loading de datos
+
+### Mantenibilidad
+- Código modular y reutilizable
+- Comentarios y documentación
+- Estructura escalable
+
+## 📝 Licencia
+
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+
+## 👨‍💻 Autor
+
+**ASI Corporativa Team**
+
+---
+
+**Versión:** 1.0.0  
+**Última actualización:** 17/9/2025  
+**Estado:** ✅ Estable y Funcional
 
 Sistema completo de gestión de líneas corporativas móviles con representantes legales y funcionalidades tipo DataTables.
 

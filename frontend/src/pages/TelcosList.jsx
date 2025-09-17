@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   Typography,
@@ -8,14 +9,14 @@ import {
   Modal,
   Form,
   Input,
-  Select,
-  message,
   Popconfirm,
   Row,
   Col,
   Card,
   Dropdown,
   Tag,
+  Select,
+  message
 } from 'antd';
 import {
   PlusOutlined,
@@ -25,19 +26,24 @@ import {
   FilterOutlined,
   DownOutlined,
   ClearOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
+import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { Search } = Input;
 
-export default function TelcosList() {
+function TelcosList() {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [advisors, setAdvisors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTelco, setEditingTelco] = useState(null);
   const [form] = Form.useForm();
+  const firstInputRef = useRef(null);
+  const [partialResults, setPartialResults] = useState([]);
   
   // Estados para paginación y búsqueda tipo DataTables
   const [pagination, setPagination] = useState({
@@ -66,6 +72,15 @@ export default function TelcosList() {
     fetchTelcos();
     fetchAdvisors();
   }, []);
+
+  // Efecto para hacer focus en el primer campo cuando se abre el modal
+  useEffect(() => {
+    if (modalVisible && firstInputRef.current) {
+      setTimeout(() => {
+        firstInputRef.current.focus();
+      }, 100);
+    }
+  }, [modalVisible]);
 
   const fetchTelcos = async (page = 1, pageSize = 10, currentFilters = filters) => {
     setLoading(true);
@@ -133,14 +148,34 @@ export default function TelcosList() {
     fetchTelcos(paginationInfo.current, paginationInfo.pageSize, filters);
   };
 
-  // Búsqueda global tipo DataTables
+  // Búsqueda global tipo DataTables con debounce
+  const debounceRef = useRef();
+  // Mejor debounce: solo filtra tras dejar de escribir 500ms
   const handleGlobalSearch = (value) => {
-    console.log('Búsqueda global iniciada:', value); // Debug log
-    const newFilters = { ...filters, global: value };
-    setFilters(newFilters);
-    setPagination(prev => ({ ...prev, current: 1 }));
-    fetchTelcos(1, pagination.pageSize, newFilters);
-    updateActiveFilters(newFilters);
+    // Filtrado parcial local
+    setFilters(prev => ({ ...prev, global: value }));
+    if (value.length > 0) {
+      const filtered = data.filter(telco => {
+        return Object.values(telco).some(v =>
+          String(v).toLowerCase().includes(value.toLowerCase())
+        );
+      });
+      setPartialResults(filtered);
+    } else {
+      setPartialResults([]);
+    }
+    // Debounce para consulta final a la API
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      const newFilters = { ...filters, global: value };
+      setFilters(newFilters);
+      setPagination(prev => ({ ...prev, current: 1 }));
+      fetchTelcos(1, pagination.pageSize, newFilters);
+      updateActiveFilters(newFilters);
+      setPartialResults([]);
+    }, 1000); // 1s debounce para consulta final
   };
 
   // Filtros por columna tipo DataTables
@@ -194,6 +229,20 @@ export default function TelcosList() {
     fetchTelcos(1, pagination.pageSize, newFilters);
     updateActiveFilters(newFilters);
   };
+
+  const handleCreate = () => {
+    setEditingTelco(null);
+    form.resetFields();
+    setModalVisible(true);
+  };
+
+  // Atajos de teclado
+  useKeyboardShortcuts([
+    {
+      key: 'F2',
+      callback: handleCreate,
+    },
+  ]);
 
   const handleEdit = (record) => {
     setEditingTelco(record);
@@ -305,7 +354,7 @@ export default function TelcosList() {
     filterIcon: filtered => (
       <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
     ),
-    filteredValue: filters[column] ? [filters[column]] : null,
+    filteredValue: filters[column] ? [filters[column]] : null
   });
 
   const columns = [
@@ -362,10 +411,17 @@ export default function TelcosList() {
     {
       title: 'Acciones',
       key: 'actions',
-      width: 120,
+      width: 150,
       fixed: 'right',
       render: (_, record) => (
         <Space>
+          <Button
+            type="default"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => navigate(`/telcos/${record.id}`)}
+            title="Ver detalle"
+          />
           <Button
             type="primary"
             size="small"
@@ -394,152 +450,118 @@ export default function TelcosList() {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Card>
-        {/* Header con título y botón nuevo */}
-        <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-          <Col>
-            <Title level={2} style={{ margin: 0 }}>
-              Gestión de Telcos
-            </Title>
-            <Text type="secondary">
-              Administra operadores de telecomunicaciones y sus asesores
-            </Text>
-          </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setModalVisible(true)}
-              size="large"
-            >
-              Nuevo Telco
-            </Button>
-          </Col>
-        </Row>
-
-        {/* Controles tipo DataTables */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          {/* Búsqueda global */}
-          <Col xs={24} sm={12} md={8}>
-            <Search
-              placeholder="Búsqueda global en todos los campos..."
-              allowClear
-              enterButton="Buscar"
-              size="large"
-              onSearch={handleGlobalSearch}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFilters(prev => ({ ...prev, global: value }));
-                if (value === '') {
-                  handleGlobalSearch('');
-                }
-              }}
-              value={filters.global}
-              style={{ width: '100%' }}
-            />
-          </Col>
-
-          {/* Selector de registros por página */}
-          <Col xs={24} sm={12} md={4}>
-            <Select
-              style={{ width: '100%' }}
-              value={pagination.pageSize}
-              onChange={(value) => {
-                const newPagination = { ...pagination, pageSize: value, current: 1 };
-                setPagination(newPagination);
-                fetchTelcos(1, value, filters);
-              }}
-              size="large"
-            >
-              <Option value={5}>5 por página</Option>
-              <Option value={10}>10 por página</Option>
-              <Option value={25}>25 por página</Option>
-              <Option value={50}>50 por página</Option>
-              <Option value={100}>100 por página</Option>
-            </Select>
-          </Col>
-
-          {/* Botón limpiar filtros */}
-          <Col xs={24} sm={12} md={4}>
-            <Button
-              icon={<ClearOutlined />}
-              onClick={clearAllFilters}
-              size="large"
-              style={{ width: '100%' }}
-              disabled={activeFilters.length === 0}
-            >
-              Limpiar Filtros
-            </Button>
-          </Col>
-
-          {/* Información de registros */}
-          <Col xs={24} sm={12} md={8} style={{ textAlign: 'right' }}>
-            <Text type="secondary" style={{ fontSize: '14px', lineHeight: '40px' }}>
-              {pagination.total > 0 ? (
-                <>
-                  Mostrando{' '}
-                  <Text strong>
-                    {(pagination.current - 1) * pagination.pageSize + 1}-
-                    {Math.min(pagination.current * pagination.pageSize, pagination.total)}
-                  </Text>{' '}
-                  de <Text strong>{pagination.total}</Text> registros
-                  {activeFilters.length > 0 && (
-                    <>
-                      {' '}(filtrado de {pagination.total} registros totales)
-                    </>
-                  )}
-                </>
-              ) : (
-                'Sin registros para mostrar'
-              )}
-            </Text>
-          </Col>
-        </Row>
-
-        {/* Tags de filtros activos */}
-        {activeFilters.length > 0 && (
-          <Row style={{ marginBottom: 16 }}>
-            <Col span={24}>
-              <Text strong style={{ marginRight: 8 }}>
-                Filtros activos:
-              </Text>
-              <Space wrap>
-                {activeFilters.map((filter) => (
-                  <Tag
-                    key={filter.key}
-                    closable
-                    onClose={() => clearFilter(filter.key)}
-                    color="blue"
-                  >
-                    {filter.label}: {filter.value}
-                  </Tag>
-                ))}
-              </Space>
-            </Col>
-          </Row>
-        )}
-
-        {/* Tabla principal */}
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            ...pagination,
-            showSizeChanger: false, // Deshabilitamos el cambiador aquí porque tenemos el nuestro
-            showQuickJumper: true,
-            showTotal: () => null, // Deshabilitamos el total aquí porque tenemos el nuestro
-            size: 'default',
-          }}
-          onChange={handleTableChange}
-          scroll={{ x: 1200 }}
-          size="middle"
-          bordered
-        />
-      </Card>
-
-      {/* Modal para crear/editar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <Title level={2}>
+          Gestión de Telcos
+        </Title>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleCreate}
+          size="large"
+          title="Presiona F2 para crear nuevo telco"
+        >
+          Nuevo Telco (F2)
+        </Button>
+      </div>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        {/* Búsqueda global */}
+        <Col xs={24} sm={12} md={8}>
+          <Search
+            placeholder="Búsqueda global en todos los campos..."
+            allowClear
+            enterButton="Buscar"
+            size="large"
+            onSearch={handleGlobalSearch}
+            onChange={(e) => {
+              const value = e.target.value;
+              handleGlobalSearch(value);
+            }}
+            value={filters.global}
+            style={{ width: '100%' }}
+          />
+        </Col>
+        {/* Selector de registros por página */}
+        <Col xs={24} sm={12} md={4}>
+          <Select
+            style={{ width: '100%' }}
+            value={pagination.pageSize}
+            onChange={(value) => {
+              const newPagination = { ...pagination, pageSize: value, current: 1 };
+              setPagination(newPagination);
+              fetchTelcos(1, value, filters);
+            }}
+            size="large"
+          >
+            <Option value={5}>5 por página</Option>
+            <Option value={10}>10 por página</Option>
+            <Option value={25}>25 por página</Option>
+            <Option value={50}>50 por página</Option>
+            <Option value={100}>100 por página</Option>
+          </Select>
+        </Col>
+        {/* Botón limpiar filtros */}
+        <Col xs={24} sm={12} md={4}>
+          <Button
+            icon={<ClearOutlined />}
+            onClick={clearAllFilters}
+            size="large"
+            style={{ width: '100%' }}
+            disabled={activeFilters.length === 0}
+          >
+            Limpiar Filtros
+          </Button>
+        </Col>
+        {/* Información de registros */}
+        <Col xs={24} sm={12} md={8} style={{ textAlign: 'right' }}>
+          <Text type="secondary" style={{ fontSize: '14px', lineHeight: '40px' }}>
+            {pagination.total > 0 ? (
+              <>
+                Mostrando{' '}
+                <Text strong>
+                  {(pagination.current - 1) * pagination.pageSize + 1}-
+                  {Math.min(pagination.current * pagination.pageSize, pagination.total)}
+                </Text>{' '}
+                de <Text strong>{pagination.total}</Text> registros
+                {activeFilters.length > 0 && (
+                  <>
+                    {' '}(filtrado de {pagination.total} registros totales)
+                  </>
+                )}
+              </>
+            ) : null}
+          </Text>
+        </Col>
+      </Row>
+      <Space wrap style={{ marginBottom: 16 }}>
+        {activeFilters.map((filter) => (
+          <Tag
+            key={filter.key}
+            closable
+            onClose={() => clearFilter(filter.key)}
+            color="blue"
+          >
+            {filter.label}: {filter.value}
+          </Tag>
+        ))}
+      </Space>
+      <Table
+        columns={columns}
+        dataSource={partialResults.length > 0 ? partialResults : data}
+        rowKey="id"
+        loading={loading}
+        pagination={{
+          ...pagination,
+          showSizeChanger: false,
+          showQuickJumper: true,
+          showTotal: () => null,
+          size: 'default',
+        }}
+        onChange={handleTableChange}
+        scroll={{ x: 1200 }}
+        size="middle"
+        bordered
+      />
       <Modal
         title={editingTelco ? 'Editar Telco' : 'Nuevo Telco'}
         open={modalVisible}
@@ -559,73 +581,31 @@ export default function TelcosList() {
           <Form.Item
             label="Nombre"
             name="name"
-            rules={[
-              { required: true, message: 'Por favor ingresa el nombre del telco' },
-              { min: 2, message: 'El nombre debe tener al menos 2 caracteres' },
-            ]}
+            rules={[{ required: true, message: 'Por favor ingresa el nombre del telco' }, { min: 2, message: 'El nombre debe tener al menos 2 caracteres' }]}
           >
-            <Input placeholder="Ej: Claro Colombia" />
+            <Input ref={firstInputRef} placeholder="Ej: Claro Colombia" />
           </Form.Item>
-
-          <Form.Item
-            label="Dirección"
-            name="address"
-          >
-            <Input.TextArea 
-              placeholder="Ej: Calle 123 #45-67, Bogotá" 
-              rows={3}
-            />
+          <Form.Item label="Dirección" name="address">
+            <Input.TextArea placeholder="Ej: Calle 123 #45-67, Bogotá" rows={3} />
           </Form.Item>
-
-          <Form.Item
-            label="Teléfono"
-            name="phone"
-            rules={[
-              { pattern: /^[\d\s\-\+\(\)]+$/, message: 'Formato de teléfono inválido' }
-            ]}
-          >
-            <Input placeholder="Ej: +57 1 234-5678" />
+          <Form.Item label="Teléfono" name="phone" rules={[{ pattern: /^[\d\s\-\+\(\)]+$/, message: 'Formato de teléfono inválido' }]}> 
+            <Input placeholder="Ej: +57 1 234-5678" /> 
           </Form.Item>
-
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                label="Asesor de Ventas"
-                name="salesAdvisorId"
-              >
-                <Select
-                  placeholder="Seleccionar asesor"
-                  allowClear
-                  showSearch
-                  filterOption={(input, option) =>
-                    option?.children?.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
+              <Form.Item label="Asesor de Ventas" name="salesAdvisorId">
+                <Select placeholder="Seleccionar asesor" allowClear showSearch filterOption={(input, option) => option?.children?.toLowerCase().includes(input.toLowerCase())}>
                   {advisors.map((advisor) => (
-                    <Option key={advisor.id} value={advisor.id}>
-                      {advisor.name}
-                    </Option>
+                    <Option key={advisor.id} value={advisor.id}>{advisor.name}</Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                label="Asesor Post Ventas"
-                name="postSalesAdvisorId"
-              >
-                <Select
-                  placeholder="Seleccionar asesor"
-                  allowClear
-                  showSearch
-                  filterOption={(input, option) =>
-                    option?.children?.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
+              <Form.Item label="Asesor Post Ventas" name="postSalesAdvisorId">
+                <Select placeholder="Seleccionar asesor" allowClear showSearch filterOption={(input, option) => option?.children?.toLowerCase().includes(input.toLowerCase())}>
                   {advisors.map((advisor) => (
-                    <Option key={advisor.id} value={advisor.id}>
-                      {advisor.name}
-                    </Option>
+                    <Option key={advisor.id} value={advisor.id}>{advisor.name}</Option>
                   ))}
                 </Select>
               </Form.Item>
@@ -636,3 +616,5 @@ export default function TelcosList() {
     </div>
   );
 }
+
+export default TelcosList;
