@@ -85,7 +85,6 @@ chmod +x setup.sh
 #### Prerrequisitos
 - Node.js 16+
 - MySQL 8.0+
-- Puerto 3307 disponible
 
 #### Pasos:
 
@@ -102,7 +101,7 @@ CREATE DATABASE asicorporativa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 3. **Importar datos**
 ```bash
-mysql -u root -p -P 3307 asicorporativa < asi_corporativa_complete_export.sql
+mysql -u [usuario] -p [base_de_datos] < asi_corporativa_complete_export.sql
 ```
 
 4. **Configurar backend**
@@ -111,15 +110,7 @@ cd backend
 npm install
 ```
 
-Crear archivo `.env`:
-```env
-DB_HOST=localhost
-DB_PORT=3307
-DB_USER=root
-DB_PASSWORD=root
-DB_NAME=asicorporativa
-PORT=3001
-```
+Crear archivo `.env` con tus credenciales de base de datos.
 
 5. **Configurar frontend**
 ```bash
@@ -145,7 +136,6 @@ npm start
 
 - **Frontend:** http://localhost:3000
 - **Backend:** http://localhost:3001
-- **Base de Datos:** localhost:3307/asicorporativa
 
 ## 📊 Módulos Disponibles
 
