@@ -9,12 +9,14 @@ import {
   TeamOutlined,
   ContactsOutlined,
   SolutionOutlined,
+  DashboardOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
 const { Header, Sider, Content } = Layout;
 
 const items = [
+  { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
   { key: '/users', icon: <UserOutlined />, label: 'Usuarios' },
   { key: '/lines', icon: <PhoneOutlined />, label: 'Líneas' },
   { key: '/telcos', icon: <GlobalOutlined />, label: 'Telcos' },
@@ -28,7 +30,15 @@ const items = [
 function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const selectedKey = items.find(i => location.pathname.startsWith(i.key))?.key || '/lines';
+  
+  // Determinar la clave seleccionada basada en la ruta actual
+  let selectedKey = '/';
+  if (location.pathname === '/' || location.pathname === '/dashboard') {
+    selectedKey = '/';
+  } else {
+    const foundItem = items.find(i => i.key !== '/' && location.pathname.startsWith(i.key));
+    selectedKey = foundItem?.key || '/';
+  }
 
   return (
     <Layout style={{ minHeight: '100vh' }}>

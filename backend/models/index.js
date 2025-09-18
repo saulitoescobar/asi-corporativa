@@ -46,17 +46,18 @@ db.LegalRepresentative.belongsTo(db.Company, {
 });
 
 // Telcos ↔ Advisors
-db.Advisor.belongsTo(db.Telco, { foreignKey: 'telco_id', as: 'telco' });
+db.Advisor.belongsTo(db.Telco, { foreignKey: 'telcoId', as: 'telco' });
+db.Telco.hasMany(db.Advisor, { foreignKey: 'telcoId', as: 'advisors' });
 db.Telco.belongsTo(db.Advisor, { foreignKey: 'sales_advisor_id', as: 'salesAdvisor' });
 db.Telco.belongsTo(db.Advisor, { foreignKey: 'post_sales_advisor_id', as: 'postSalesAdvisor' });
-db.Advisor.hasMany(db.Telco, { foreignKey: 'sales_advisor_id', as: 'salesTelcos' });
-db.Advisor.hasMany(db.Telco, { foreignKey: 'post_sales_advisor_id', as: 'postSalesTelcos' });
 
-// Líneas ↔ User, Plan, Telco
+// Líneas ↔ User, Plan, Telco, Advisor
 db.Line.belongsTo(db.User, { foreignKey: 'user_id', as: 'user' });
 db.Line.belongsTo(db.Plan, { foreignKey: 'plan_id', as: 'plan' });
 db.Line.belongsTo(db.Telco, { foreignKey: 'telco_id', as: 'telco' });
+db.Line.belongsTo(db.Advisor, { foreignKey: 'advisor_id', as: 'advisor' });
 db.Plan.hasMany(db.Line, { foreignKey: 'plan_id', as: 'lines' });
 db.Telco.hasMany(db.Line, { foreignKey: 'telco_id', as: 'lines' });
+db.Advisor.hasMany(db.Line, { foreignKey: 'advisor_id', as: 'lines' });
 
 module.exports = db;

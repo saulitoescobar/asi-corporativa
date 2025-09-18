@@ -3,6 +3,7 @@ import './App.css';
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MainLayout from './components/MainLayout';
+import Dashboard from './pages/Dashboard';
 import UsersList from './pages/UsersList';
 import UserDetail from './pages/UserDetail';
 import LinesList from './pages/LinesList';
@@ -20,7 +21,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<LinesList />} />
+          <Route index element={<Dashboard />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="users" element={<UsersList />} />
           <Route path="usuarios" element={<UsersList />} />
           <Route path="usuarios/:id" element={<UserDetail />} />

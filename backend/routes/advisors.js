@@ -7,7 +7,22 @@ console.log('Advisors route loaded');
 // Obtener todos los asesores desde DB
 router.get('/', async (req, res) => {
   try {
-    const advisors = await db.Advisor.findAll();
+    const { telcoId } = req.query;
+    const whereClause = {};
+    
+    if (telcoId) {
+      whereClause.telcoId = telcoId;
+    }
+    
+    const advisors = await db.Advisor.findAll({
+      where: whereClause,
+      include: [
+        { 
+          model: db.Telco, 
+          as: 'telco' 
+        }
+      ]
+    });
     res.json(advisors);
   } catch (err) {
     console.error(err);

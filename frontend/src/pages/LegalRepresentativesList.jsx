@@ -25,6 +25,7 @@ import {
   ClearOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
@@ -51,6 +52,18 @@ const LegalRepresentativesList = () => {
     showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} registros`,
     pageSizeOptions: ['5', '10', '20', '50'],
   });
+
+  // Manejar apertura de modal para nuevo representante
+  const handleAdd = () => {
+    setEditingRepresentative(null);
+    form.resetFields();
+    setModalVisible(true);
+  };
+
+  // Hook para atajos de teclado
+  useKeyboardShortcuts([
+    { key: 'F2', callback: handleAdd }
+  ]);
 
   // Cargar representantes legales
   const fetchRepresentatives = async () => {
@@ -248,12 +261,6 @@ const LegalRepresentativesList = () => {
   };
 
   // Manejar apertura de modal para nuevo representante
-  const handleAdd = () => {
-    setEditingRepresentative(null);
-    form.resetFields();
-    setModalVisible(true);
-  };
-
   // Cerrar modal
   const handleCancel = () => {
     setModalVisible(false);
@@ -377,8 +384,9 @@ const LegalRepresentativesList = () => {
           icon={<PlusOutlined />}
           onClick={handleAdd}
           size="large"
+          title="Presiona F2 para crear nuevo representante legal"
         >
-          Nuevo Representante Legal
+          Nuevo Representante Legal (F2)
         </Button>
       </div>
 

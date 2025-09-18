@@ -3,6 +3,19 @@ const router = express.Router();
 const db = require('../models');
 const { Op } = require('sequelize');
 
+// Obtener todas las telcos (sin paginación) - para selects
+router.get('/all', async (req, res) => {
+  try {
+    const telcos = await db.Telco.findAll({
+      order: [['name', 'ASC']]
+    });
+    res.json(telcos);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener telcos' });
+  }
+});
+
 // Obtener todos los telcos desde DB con paginación y búsqueda avanzada
 router.get('/', async (req, res) => {
   try {
