@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Table,
   Typography,
-  Spin,
   Button,
   Space,
   Modal,
@@ -12,19 +11,16 @@ import {
   Popconfirm,
   Row,
   Col,
-  Card,
-  Dropdown,
   Tag,
   Select,
-  message
+  message,
+  Breadcrumb
 } from 'antd';
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   SearchOutlined,
-  FilterOutlined,
-  DownOutlined,
   ClearOutlined,
   EyeOutlined,
 } from '@ant-design/icons';
@@ -450,8 +446,16 @@ function TelcosList() {
 
   return (
     <div style={{ padding: '24px' }}>
+      {/* Breadcrumb */}
+      <Breadcrumb style={{ marginBottom: 16 }}>
+        <Breadcrumb.Item>Inicio</Breadcrumb.Item>
+        <Breadcrumb.Item>Gestión de Telcos</Breadcrumb.Item>
+        <Breadcrumb.Item>Lista de telcos</Breadcrumb.Item>
+      </Breadcrumb>
+
+      {/* Header con título y botón nuevo */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={2}>
+        <Title level={2} style={{ margin: 0 }}>
           Gestión de Telcos
         </Title>
         <Button
@@ -468,7 +472,7 @@ function TelcosList() {
         {/* Búsqueda global */}
         <Col xs={24} sm={12} md={8}>
           <Search
-            placeholder="Búsqueda global en todos los campos..."
+            placeholder="Búsqueda de Telcos..."
             allowClear
             enterButton="Buscar"
             size="large"

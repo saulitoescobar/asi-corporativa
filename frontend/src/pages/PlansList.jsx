@@ -13,7 +13,8 @@ import {
   Tag,
   Select,
   message,
-  InputNumber
+  InputNumber,
+  Breadcrumb,
 } from 'antd';
 import {
   PlusOutlined,
@@ -461,8 +462,16 @@ function PlansList() {
 
   return (
     <div style={{ padding: '24px' }}>
+      {/* Breadcrumb */}
+      <Breadcrumb style={{ marginBottom: 16 }}>
+        <Breadcrumb.Item>Inicio</Breadcrumb.Item>
+        <Breadcrumb.Item>Gestión de Planes</Breadcrumb.Item>
+        <Breadcrumb.Item>Lista de planes</Breadcrumb.Item>
+      </Breadcrumb>
+
+      {/* Header con título y botón nuevo */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={2}>
+        <Title level={2} style={{ margin: 0 }}>
           Gestión de Planes
         </Title>
         <Button
@@ -475,6 +484,8 @@ function PlansList() {
           Nuevo Plan (F2)
         </Button>
       </div>
+
+      {/* Controles tipo DataTables */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         {/* Búsqueda global */}
         <Col xs={24} sm={12} md={8}>
@@ -492,6 +503,7 @@ function PlansList() {
             style={{ width: '100%' }}
           />
         </Col>
+
         {/* Selector de registros por página */}
         <Col xs={24} sm={12} md={4}>
           <Select

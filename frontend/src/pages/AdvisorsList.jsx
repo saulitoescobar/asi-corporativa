@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   Table,
   Typography,
-  Spin,
   Button,
   Space,
   Modal,
@@ -11,19 +10,16 @@ import {
   Popconfirm,
   Row,
   Col,
-  Card,
-  Dropdown,
   Tag,
   Select,
-  message
+  message,
+  Breadcrumb,
 } from 'antd';
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   SearchOutlined,
-  FilterOutlined,
-  DownOutlined,
   ClearOutlined,
 } from '@ant-design/icons';
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
@@ -431,8 +427,16 @@ function AdvisorsList() {
 
   return (
     <div style={{ padding: '24px' }}>
+      {/* Breadcrumb */}
+      <Breadcrumb style={{ marginBottom: 16 }}>
+        <Breadcrumb.Item>Inicio</Breadcrumb.Item>
+        <Breadcrumb.Item>Gestión de Asesores</Breadcrumb.Item>
+        <Breadcrumb.Item>Lista de asesores</Breadcrumb.Item>
+      </Breadcrumb>
+
+      {/* Header con título y botón nuevo */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={2}>
+        <Title level={2} style={{ margin: 0 }}>
           Gestión de Asesores
         </Title>
         <Button
@@ -445,6 +449,8 @@ function AdvisorsList() {
           Nuevo Asesor (F2)
         </Button>
       </div>
+
+      {/* Controles tipo DataTables */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         {/* Búsqueda global */}
         <Col xs={24} sm={12} md={8}>
@@ -462,6 +468,7 @@ function AdvisorsList() {
             style={{ width: '100%' }}
           />
         </Col>
+
         {/* Selector de registros por página */}
         <Col xs={24} sm={12} md={4}>
           <Select
@@ -481,6 +488,7 @@ function AdvisorsList() {
             <Option value={100}>100 por página</Option>
           </Select>
         </Col>
+
         {/* Botón limpiar filtros */}
         <Col xs={24} sm={12} md={4}>
           <Button

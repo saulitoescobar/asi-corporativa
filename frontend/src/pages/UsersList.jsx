@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Table, 
   Typography, 
-  Spin, 
   Button, 
   Space, 
   Input, 
@@ -15,7 +14,8 @@ import {
   Row,
   Col,
   Select,
-  DatePicker
+  DatePicker,
+  Breadcrumb,
 } from 'antd';
 import { 
   SearchOutlined, 
@@ -29,8 +29,9 @@ import {
 import dayjs from 'dayjs';
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
+const { Search } = Input;
 
 export default function UsersList() {
   const navigate = useNavigate();
@@ -254,6 +255,20 @@ export default function UsersList() {
     setActiveFilters([]);
     setPagination(prev => ({ ...prev, current: 1 }));
     fetchUsers(1, pagination.pageSize, newFilters);
+  };
+
+  // Limpiar todos los filtros (alias para compatibilidad)
+  const clearAllFilters = () => {
+    clearFilters();
+  };
+
+  // Limpiar filtro específico
+  const clearFilter = (filterKey) => {
+    const newFilters = { ...filters, [filterKey]: '' };
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, current: 1 }));
+    fetchUsers(1, pagination.pageSize, newFilters);
+    updateActiveFilters(newFilters);
   };
 
   // Función para obtener el dropdown de filtro por columna
@@ -505,70 +520,127 @@ export default function UsersList() {
   const displayData = partialResults.length > 0 ? partialResults : data;
 
   return (
-    <div style={{ padding: '20px' }}>
-      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-        <Col>
-          <Title level={2} style={{ margin: 0, color: '#1890ff' }}>
-            Usuarios
-          </Title>
-        </Col>
-        <Col>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleCreate}
+    <div style={{ padding: '24px' }}>
+      {/* Breadcrumb */}
+      <Breadcrumb style={{ marginBottom: 16 }}>
+        <Breadcrumb.Item>Inicio</Breadcrumb.Item>
+        <Breadcrumb.Item>Gestión de Usuarios</Breadcrumb.Item>
+        <Breadcrumb.Item>Lista de usuarios</Breadcrumb.Item>
+      </Breadcrumb>
+
+      {/* Header con título y botón nuevo */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <Title level={2} style={{ margin: 0 }}>
+          Gestión de Usuarios
+        </Title>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleCreate}
+          size="large"
+          title="Presiona F2 para crear nuevo usuario"
+        >
+          Nuevo Usuario (F2)
+        </Button>
+      </div>
+
+      {/* Controles tipo DataTables */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        {/* Búsqueda global */}
+        <Col xs={24} sm={12} md={8}>
+          <Search
+            placeholder="Búsqueda global en todos los campos..."
+            value={filters.global}
+            onChange={(e) => handleGlobalSearch(e.target.value)}
+            onSearch={handleGlobalSearch}
+            allowClear
             size="large"
-            title="Presiona F2 para crear nuevo usuario"
+            enterButton="Buscar"
+            style={{ width: '100%' }}
+          />
+        </Col>
+
+        {/* Selector de registros por página */}
+        <Col xs={24} sm={12} md={4}>
+          <Select
+            style={{ width: '100%' }}
+            value={pagination.pageSize}
+            onChange={(value) => {
+              const newPagination = { ...pagination, pageSize: value, current: 1 };
+              setPagination(newPagination);
+              fetchUsers(1, value, filters);
+            }}
+            size="large"
           >
-            Nuevo Usuario (F2)
+            <Option value={5}>5 por página</Option>
+            <Option value={10}>10 por página</Option>
+            <Option value={25}>25 por página</Option>
+            <Option value={50}>50 por página</Option>
+            <Option value={100}>100 por página</Option>
+          </Select>
+        </Col>
+
+        {/* Botón limpiar filtros */}
+        <Col xs={24} sm={12} md={4}>
+          <Button
+            icon={<ClearOutlined />}
+            onClick={clearAllFilters}
+            size="large"
+            style={{ width: '100%' }}
+            disabled={activeFilters.length === 0}
+          >
+            Limpiar Filtros
           </Button>
+        </Col>
+
+        {/* Información de registros */}
+        <Col xs={24} sm={12} md={8} style={{ textAlign: 'right' }}>
+          <Text type="secondary" style={{ fontSize: '14px', lineHeight: '40px' }}>
+            {pagination.total > 0 ? (
+              <>
+                Mostrando{' '}
+                <Text strong>
+                  {(pagination.current - 1) * pagination.pageSize + 1}-
+                  {Math.min(pagination.current * pagination.pageSize, pagination.total)}
+                </Text>{' '}
+                de <Text strong>{pagination.total}</Text> registros
+                {activeFilters.length > 0 && (
+                  <>
+                    {' '}(filtrado de {pagination.total} registros totales)
+                  </>
+                )}
+              </>
+            ) : null}
+          </Text>
         </Col>
       </Row>
 
-      {/* Barra de búsqueda global estilo DataTables */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} md={8}>
-          <Input
-            placeholder="Buscar en todas las columnas..."
-            prefix={<SearchOutlined />}
-            value={filters.global}
-            onChange={(e) => handleGlobalSearch(e.target.value)}
-            allowClear
-            size="large"
-          />
-        </Col>
-        <Col xs={24} sm={12} md={16}>
-          <Space wrap>
-            {activeFilters.map((filter) => (
-              <Tag
-                key={filter.key}
-                closable
-                onClose={() => handleColumnFilter(filter.key, '')}
-                color="blue"
-              >
-                {filter.label}: {filter.value}
-              </Tag>
-            ))}
-            {activeFilters.length > 0 && (
-              <Button
-                type="link"
-                onClick={clearFilters}
-                icon={<ClearOutlined />}
-                size="small"
-              >
-                Limpiar filtros
-              </Button>
-            )}
-          </Space>
-        </Col>
-      </Row>
+      {/* Tags de filtros activos */}
+      <Space wrap style={{ marginBottom: 16 }}>
+        {activeFilters.map((filter) => (
+          <Tag
+            key={filter.key}
+            closable
+            onClose={() => clearFilter(filter.key)}
+            color="blue"
+          >
+            {filter.label}: {filter.value}
+          </Tag>
+        ))}
+      </Space>
 
       <Table
         columns={columns}
         dataSource={displayData}
         rowKey="id"
         loading={loading}
-        pagination={pagination}
+        pagination={{
+          ...pagination,
+          showSizeChanger: false,
+          showQuickJumper: true,
+          showTotal: () => null,
+          size: 'default',
+        }}
         onChange={handleTableChange}
         scroll={{ x: 1000 }}
         size="middle"

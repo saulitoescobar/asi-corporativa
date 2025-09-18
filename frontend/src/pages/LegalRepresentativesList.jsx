@@ -11,9 +11,10 @@ import {
   message,
   Popconfirm,
   Tag,
-  Card,
   Row,
   Col,
+  Typography,
+  Breadcrumb,
 } from 'antd';
 import {
   PlusOutlined,
@@ -21,10 +22,13 @@ import {
   DeleteOutlined,
   UserOutlined,
   HistoryOutlined,
+  ClearOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
+const { Title, Text } = Typography;
+const { Search } = Input;
 
 const LegalRepresentativesList = () => {
   const [representatives, setRepresentatives] = useState([]);
@@ -33,6 +37,20 @@ const LegalRepresentativesList = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRepresentative, setEditingRepresentative] = useState(null);
   const [form] = Form.useForm();
+  
+  // Estados para filtros y búsqueda
+  const [searchText, setSearchText] = useState('');
+  const [filteredRepresentatives, setFilteredRepresentatives] = useState([]);
+  const [appliedFilters, setAppliedFilters] = useState([]);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+    showSizeChanger: true,
+    showQuickJumper: true,
+    showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} registros`,
+    pageSizeOptions: ['5', '10', '20', '50'],
+  });
 
   // Cargar representantes legales
   const fetchRepresentatives = async () => {
@@ -42,6 +60,11 @@ const LegalRepresentativesList = () => {
       if (response.ok) {
         const data = await response.json();
         setRepresentatives(data);
+        setFilteredRepresentatives(data);
+        setPagination(prev => ({
+          ...prev,
+          total: data.length
+        }));
       } else {
         message.error('Error al cargar los representantes legales');
       }
@@ -52,6 +75,53 @@ const LegalRepresentativesList = () => {
       setLoading(false);
     }
   };
+
+  // Filtros y búsqueda
+  const filterRepresentatives = () => {
+    let filtered = [...representatives];
+    
+    if (searchText) {
+      filtered = filtered.filter(rep =>
+        rep.firstName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        rep.lastName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        rep.email?.toLowerCase().includes(searchText.toLowerCase()) ||
+        rep.profession?.toLowerCase().includes(searchText.toLowerCase()) ||
+        rep.company?.name?.toLowerCase().includes(searchText.toLowerCase())
+      );
+    }
+    
+    setFilteredRepresentatives(filtered);
+    setPagination(prev => ({
+      ...prev,
+      total: filtered.length,
+      current: 1
+    }));
+  };
+
+  const clearAllFilters = () => {
+    setSearchText('');
+    setAppliedFilters([]);
+  };
+
+  const clearFilter = (filterToRemove) => {
+    if (filterToRemove === 'search') {
+      setSearchText('');
+    }
+    setAppliedFilters(prev => prev.filter(f => f !== filterToRemove));
+  };
+
+  const onSearch = (value) => {
+    setSearchText(value);
+    if (value && !appliedFilters.includes('search')) {
+      setAppliedFilters(prev => [...prev, 'search']);
+    } else if (!value) {
+      setAppliedFilters(prev => prev.filter(f => f !== 'search'));
+    }
+  };
+
+  useEffect(() => {
+    filterRepresentatives();
+  }, [representatives, searchText]);
 
   // Cargar empresas para el selector
   const fetchCompanies = async () => {
@@ -289,40 +359,125 @@ const LegalRepresentativesList = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Card>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-          <Col>
-            <h2 style={{ margin: 0 }}>
-              <UserOutlined style={{ marginRight: 8 }} />
-              Representantes Legales
-            </h2>
-          </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleAdd}
-            >
-              Nuevo Representante Legal
-            </Button>
-          </Col>
-        </Row>
+      {/* Breadcrumb */}
+      <Breadcrumb style={{ marginBottom: 16 }}>
+        <Breadcrumb.Item>Inicio</Breadcrumb.Item>
+        <Breadcrumb.Item>Gestión de Representantes Legales</Breadcrumb.Item>
+        <Breadcrumb.Item>Lista de representantes legales</Breadcrumb.Item>
+      </Breadcrumb>
 
-        <Table
-          columns={columns}
-          dataSource={representatives}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} de ${total} representantes legales`,
-          }}
-          scroll={{ x: 1200 }}
-        />
-      </Card>
+      {/* Header con título y botón nuevo */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <Title level={2} style={{ margin: 0 }}>
+          <UserOutlined style={{ marginRight: 8 }} />
+          Gestión de Representantes Legales
+        </Title>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAdd}
+          size="large"
+        >
+          Nuevo Representante Legal
+        </Button>
+      </div>
+
+      {/* Controles de DataTable */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        {/* Búsqueda global */}
+        <Col xs={24} sm={12} md={8}>
+          <Search
+            placeholder="Buscar representantes..."
+            allowClear
+            value={searchText}
+            onChange={(e) => onSearch(e.target.value)}
+            onSearch={onSearch}
+            style={{ width: '100%' }}
+            size="large"
+            enterButton="Buscar"
+          />
+        </Col>
+        
+        {/* Selector de registros por página */}
+        <Col xs={24} sm={12} md={4}>
+          <Select
+            style={{ width: '100%' }}
+            value={pagination.pageSize}
+            onChange={(value) => {
+              setPagination(prev => ({ ...prev, pageSize: value, current: 1 }));
+            }}
+            size="large"
+          >
+            <Option value={5}>5 por página</Option>
+            <Option value={10}>10 por página</Option>
+            <Option value={25}>25 por página</Option>
+            <Option value={50}>50 por página</Option>
+            <Option value={100}>100 por página</Option>
+          </Select>
+        </Col>
+        
+        {/* Botón limpiar filtros */}
+        <Col xs={24} sm={12} md={4}>
+          <Button 
+            icon={<ClearOutlined />} 
+            onClick={clearAllFilters}
+            disabled={appliedFilters.length === 0}
+            size="large"
+            style={{ width: '100%' }}
+          >
+            Limpiar Filtros
+          </Button>
+        </Col>
+        
+        {/* Información de registros */}
+        <Col xs={24} sm={12} md={8} style={{ textAlign: 'right' }}>
+          <Text type="secondary" style={{ fontSize: '14px', lineHeight: '40px' }}>
+            {filteredRepresentatives.length > 0 ? (
+              <>
+                Mostrando{' '}
+                <Text strong>
+                  {(pagination.current - 1) * pagination.pageSize + 1}-
+                  {Math.min(pagination.current * pagination.pageSize, filteredRepresentatives.length)}
+                </Text>{' '}
+                de <Text strong>{filteredRepresentatives.length}</Text> registros
+                {appliedFilters.length > 0 && (
+                  <>
+                    {' '}(filtrado de {representatives.length} registros totales)
+                  </>
+                )}
+              </>
+            ) : null}
+          </Text>
+        </Col>
+      </Row>
+
+      {/* Tags de filtros activos */}
+      {appliedFilters.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <Text style={{ marginRight: 8 }}>Filtros activos:</Text>
+          {appliedFilters.includes('search') && searchText && (
+            <Tag 
+              closable 
+              onClose={() => clearFilter('search')}
+              color="blue"
+            >
+              Búsqueda: {searchText}
+            </Tag>
+          )}
+        </div>
+      )}
+
+      <Table
+        columns={columns}
+        dataSource={filteredRepresentatives}
+        rowKey="id"
+        loading={loading}
+        pagination={pagination}
+        scroll={{ x: 1200 }}
+        onChange={(paginationInfo) => {
+          setPagination(paginationInfo);
+        }}
+      />
 
       <Modal
         title={editingRepresentative ? 'Editar Representante Legal' : 'Nuevo Representante Legal'}

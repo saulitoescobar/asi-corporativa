@@ -188,7 +188,7 @@ module.exports = {
       {
         id: 5,
         line_number: '55-5555-6666',
-        status: 'SUSPENDED',
+        status: 'INACTIVE',
         user_id: 5,
         plan_id: 5,
         telco_id: 3
