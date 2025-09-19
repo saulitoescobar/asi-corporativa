@@ -27,6 +27,7 @@ db.Advisor = require('./Advisor')(sequelize, DataTypes);
 db.Telco = require('./Telco')(sequelize, DataTypes);
 db.Line = require('./Line')(sequelize, DataTypes);
 db.LegalRepresentative = require('./LegalRepresentative')(sequelize, DataTypes);
+db.LegalRepCompanyPeriod = require('./LegalRepCompanyPeriod')(sequelize, DataTypes);
 
 // Asociaciones (definir después de todos los modelos)
 // Usuarios ↔ Companies, Positions
@@ -35,14 +36,36 @@ db.User.belongsTo(db.Position, { foreignKey: 'positionId', as: 'position' });
 db.Company.hasMany(db.User, { foreignKey: 'companyId', as: 'users' });
 db.Position.hasMany(db.User, { foreignKey: 'positionId', as: 'users' });
 
-// Companies ↔ Legal Representatives
-db.Company.hasMany(db.LegalRepresentative, { 
-  foreignKey: 'companyId', 
-  as: 'legalRepresentatives' 
+// Legal Representatives ↔ Companies (relación N:M a través de períodos)
+db.LegalRepresentative.hasMany(db.LegalRepCompanyPeriod, { 
+  foreignKey: 'legalRepresentativeId', 
+  as: 'companyPeriods' 
 });
-db.LegalRepresentative.belongsTo(db.Company, { 
+db.Company.hasMany(db.LegalRepCompanyPeriod, { 
+  foreignKey: 'companyId', 
+  as: 'legalRepPeriods' 
+});
+db.LegalRepCompanyPeriod.belongsTo(db.LegalRepresentative, { 
+  foreignKey: 'legalRepresentativeId', 
+  as: 'legalRepresentative' 
+});
+db.LegalRepCompanyPeriod.belongsTo(db.Company, { 
   foreignKey: 'companyId', 
   as: 'company' 
+});
+
+// Relaciones Many-to-Many helpers
+db.LegalRepresentative.belongsToMany(db.Company, {
+  through: db.LegalRepCompanyPeriod,
+  foreignKey: 'legalRepresentativeId',
+  otherKey: 'companyId',
+  as: 'companies'
+});
+db.Company.belongsToMany(db.LegalRepresentative, {
+  through: db.LegalRepCompanyPeriod,
+  foreignKey: 'companyId',
+  otherKey: 'legalRepresentativeId',
+  as: 'legalRepresentatives'
 });
 
 // Telcos ↔ Advisors

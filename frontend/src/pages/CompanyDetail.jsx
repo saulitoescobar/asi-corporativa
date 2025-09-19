@@ -66,7 +66,27 @@ const CompanyDetail = () => {
       const response = await fetch(`http://localhost:3001/api/legal-representatives/company/${id}`);
       if (response.ok) {
         const data = await response.json();
-        setRepresentatives(data);
+        
+        // Transformar los datos del nuevo formato (períodos) al formato esperado
+        const transformedData = data.map(period => ({
+          id: period.id,
+          firstName: period.legalRepresentative.firstName,
+          lastName: period.legalRepresentative.lastName,
+          cui: period.legalRepresentative.cui,
+          birthDate: period.legalRepresentative.birthDate,
+          profession: period.legalRepresentative.profession,
+          email: period.legalRepresentative.email,
+          phone: period.legalRepresentative.phone,
+          address: period.legalRepresentative.address,
+          startDate: period.startDate,
+          endDate: period.endDate,
+          isActive: period.isActive,
+          notes: period.notes,
+          companyId: period.companyId,
+          legalRepresentativeId: period.legalRepresentativeId
+        }));
+        
+        setRepresentatives(transformedData);
       } else {
         message.error('Error al cargar los representantes legales');
       }
@@ -174,9 +194,9 @@ const CompanyDetail = () => {
   };
 
   // Manejar activar/desactivar
-  const handleToggleActive = async (representativeId) => {
+  const handleToggleActive = async (periodId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/legal-representatives/${representativeId}/toggle-active`, {
+      const response = await fetch(`http://localhost:3001/api/legal-representatives/period/${periodId}/toggle-active`, {
         method: 'PATCH',
       });
 
@@ -332,10 +352,32 @@ const CompanyDetail = () => {
             </Descriptions.Item>
             <Descriptions.Item label="Teléfono">{company.phone || 'No especificado'}</Descriptions.Item>
             <Descriptions.Item label="Representante Activo">
-              {company.legalRepresentatives && company.legalRepresentatives.length > 0 
-                ? `${company.legalRepresentatives[0].firstName} ${company.legalRepresentatives[0].lastName}`
-                : 'Sin representante activo'
-              }
+              {(() => {
+                const activeReps = representatives.filter(rep => rep.isActive);
+                if (activeReps.length === 0) {
+                  return 'Sin representante activo';
+                } else if (activeReps.length === 1) {
+                  return `${activeReps[0].firstName} ${activeReps[0].lastName}`;
+                } else {
+                  return (
+                    <div>
+                      <div style={{ fontWeight: 500 }}>
+                        {activeReps.length} representantes activos:
+                      </div>
+                      {activeReps.slice(0, 2).map((rep, index) => (
+                        <div key={rep.id} style={{ fontSize: '12px', color: '#666' }}>
+                          • {rep.firstName} {rep.lastName}
+                        </div>
+                      ))}
+                      {activeReps.length > 2 && (
+                        <div style={{ fontSize: '12px', color: '#1890ff' }}>
+                          y {activeReps.length - 2} más...
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+              })()}
             </Descriptions.Item>
           </Descriptions>
         </Card>

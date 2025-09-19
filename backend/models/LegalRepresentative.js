@@ -13,7 +13,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     cui: { 
       type: DataTypes.STRING(50), 
-      allowNull: false 
+      allowNull: false,
+      unique: true
     },
     birthDate: { 
       type: DataTypes.DATE, 
@@ -24,30 +25,25 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(100), 
       allowNull: true 
     },
-    companyId: { 
-      type: DataTypes.INTEGER, 
-      allowNull: false, 
-      field: 'company_id' 
+    email: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      validate: {
+        isEmail: true
+      }
     },
-    startDate: { 
-      type: DataTypes.DATE, 
-      allowNull: false, 
-      field: 'start_date' 
+    phone: {
+      type: DataTypes.STRING(20),
+      allowNull: true
     },
-    endDate: { 
-      type: DataTypes.DATE, 
-      allowNull: true, 
-      field: 'end_date' 
-    },
-    isActive: { 
-      type: DataTypes.BOOLEAN, 
-      allowNull: false, 
-      defaultValue: true, 
-      field: 'is_active' 
+    address: {
+      type: DataTypes.TEXT,
+      allowNull: true
     }
   }, {
     tableName: 'legal_representatives',
     timestamps: false,
+    // Métodos getter
     getterMethods: {
       fullName() {
         return `${this.firstName} ${this.lastName}`;
@@ -65,5 +61,6 @@ module.exports = (sequelize, DataTypes) => {
       }
     }
   });
+
   return LegalRepresentative;
 };

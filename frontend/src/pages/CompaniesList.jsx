@@ -18,6 +18,10 @@ import {
   Select,
   Tag,
   Breadcrumb,
+  Radio,
+  DatePicker,
+  Divider,
+  Checkbox,
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -42,6 +46,12 @@ const CompaniesList = () => {
   const [editingCompany, setEditingCompany] = useState(null);
   const [form] = Form.useForm();
   
+  // Estados para representantes legales
+  const [legalRepresentatives, setLegalRepresentatives] = useState([]);
+  const [repMode, setRepMode] = useState('existing'); // 'existing' o 'new'
+  const [loadingReps, setLoadingReps] = useState(false);
+  const [showRepSection, setShowRepSection] = useState(false); // Para controlar si mostrar sección al editar
+  
   // Estados para filtros y búsqueda
   const [searchText, setSearchText] = useState('');
   const [filteredCompanies, setFilteredCompanies] = useState([]);
@@ -59,6 +69,9 @@ const CompaniesList = () => {
   const handleCreate = () => {
     setEditingCompany(null);
     form.resetFields();
+    setRepMode('existing');
+    setShowRepSection(true);
+    fetchLegalRepresentatives();
     setModalVisible(true);
   };
 
@@ -76,17 +89,26 @@ const CompaniesList = () => {
   }, [companies, searchText]);
 
   const filterCompanies = () => {
-    let filtered = [...companies];
-    
-    if (searchText) {
-      filtered = filtered.filter(company =>
-        company.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-        company.nit?.toLowerCase().includes(searchText.toLowerCase()) ||
-        company.address?.toLowerCase().includes(searchText.toLowerCase()) ||
-        company.phone?.toLowerCase().includes(searchText.toLowerCase())
-      );
+    if (!searchText) {
+      setFilteredCompanies(companies);
+      setPagination(prev => ({
+        ...prev,
+        total: companies.length,
+        current: 1
+      }));
+      return;
     }
-    
+
+    const filtered = companies.filter(company => {
+      const searchLower = searchText.toLowerCase();
+      return (
+        company.name.toLowerCase().includes(searchLower) ||
+        (company.nit && company.nit.toLowerCase().includes(searchLower)) ||
+        (company.address && company.address.toLowerCase().includes(searchLower)) ||
+        (company.phone && company.phone.toLowerCase().includes(searchLower))
+      );
+    });
+
     setFilteredCompanies(filtered);
     setPagination(prev => ({
       ...prev,
@@ -136,12 +158,34 @@ const CompaniesList = () => {
     }
   };
 
+  // Cargar representantes legales disponibles
+  const fetchLegalRepresentatives = async () => {
+    setLoadingReps(true);
+    try {
+      const response = await fetch('http://localhost:3001/api/legal-representatives');
+      if (response.ok) {
+        const data = await response.json();
+        setLegalRepresentatives(data);
+      } else {
+        message.error('Error al cargar representantes legales');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      message.error('Error de conexión');
+    } finally {
+      setLoadingReps(false);
+    }
+  };
+
   const handleEdit = (company) => {
     setEditingCompany(company);
     form.setFieldsValue({
       ...company,
       legalRepresentationValidity: company.legalRepresentationValidity ? dayjs(company.legalRepresentationValidity) : null
     });
+    setRepMode('existing');
+    setShowRepSection(false);
+    fetchLegalRepresentatives();
     setModalVisible(true);
   };
 
@@ -150,12 +194,12 @@ const CompaniesList = () => {
       const response = await fetch(`http://localhost:3001/api/companies/${id}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Error al eliminar empresa');
       }
-      
+
       message.success('Empresa eliminada exitosamente');
       fetchCompanies();
     } catch (err) {
@@ -190,6 +234,92 @@ const CompaniesList = () => {
         throw new Error(errorData.error || 'Error al guardar empresa');
       }
 
+      const companyData = await response.json();
+      
+      // Gestionar representante legal tanto para nueva empresa como para edición
+      if ((values.legalRepresentativeId || repMode === 'new') && values.shouldUpdateRepresentative !== false) {
+        console.log('Gestionando representante legal:', { 
+          repMode, 
+          legalRepresentativeId: values.legalRepresentativeId,
+          isEditing: !!editingCompany 
+        });
+        
+        try {
+          const companyId = editingCompany ? editingCompany.id : companyData.id;
+          console.log('Company ID para representante:', companyId);
+          
+          if (repMode === 'existing' && values.legalRepresentativeId) {
+            // Crear período con representante existente - necesitamos obtener los datos del representante
+            const selectedRep = legalRepresentatives.find(rep => rep.id === values.legalRepresentativeId);
+            if (selectedRep) {
+              const periodData = {
+                firstName: selectedRep.firstName,
+                lastName: selectedRep.lastName,
+                cui: selectedRep.cui,
+                birthDate: selectedRep.birthDate,
+                profession: selectedRep.profession,
+                email: selectedRep.email,
+                phone: selectedRep.phone,
+                address: selectedRep.address,
+                companyId: companyId,
+                startDate: new Date().toISOString().split('T')[0],
+                isActive: true
+              };
+
+              const periodResponse = await fetch('http://localhost:3001/api/legal-representatives', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(periodData),
+              });
+
+              if (!periodResponse.ok) {
+                const errorData = await periodResponse.json();
+                console.error('Error al crear período de representación:', errorData);
+                message.warning('Error al asignar representante legal: ' + errorData.error);
+              } else {
+                console.log('Período de representación creado exitosamente');
+              }
+            }
+          } else if (repMode === 'new') {
+            // Crear nuevo representante legal
+            const newRepData = {
+              firstName: values.repFirstName,
+              lastName: values.repLastName,
+              cui: values.repCui,
+              profession: values.repProfession,
+              email: values.repEmail,
+              phone: values.repPhone,
+              address: values.repAddress,
+              birthDate: values.repBirthDate ? values.repBirthDate.format('YYYY-MM-DD') : null,
+              companyId: companyId,
+              startDate: new Date().toISOString().split('T')[0],
+              isActive: true
+            };
+
+            const newRepResponse = await fetch('http://localhost:3001/api/legal-representatives', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(newRepData),
+            });
+
+            if (!newRepResponse.ok) {
+              const errorData = await newRepResponse.json();
+              console.error('Error al crear representante legal:', errorData);
+              message.warning('Error al crear representante legal: ' + errorData.error);
+            } else {
+              console.log('Nuevo representante legal creado exitosamente');
+            }
+          }
+        } catch (repError) {
+          console.warn('Error al gestionar representante legal:', repError);
+          // No fallar toda la operación si hay error con el representante
+        }
+      }
+
       message.success(`Empresa ${editingCompany ? 'actualizada' : 'creada'} exitosamente`);
       setModalVisible(false);
       fetchCompanies();
@@ -203,19 +333,23 @@ const CompaniesList = () => {
       title: 'ID',
       dataIndex: 'id',
       key: 'id',
-      width: 60,
+      width: 80,
+      sorter: (a, b) => a.id - b.id,
     },
     {
-      title: 'Empresa',
+      title: 'Nombre',
       dataIndex: 'name',
       key: 'name',
       width: 200,
+      ellipsis: true,
+      sorter: (a, b) => a.name.localeCompare(b.name),
     },
     {
       title: 'NIT',
       dataIndex: 'nit',
       key: 'nit',
       width: 120,
+      render: (nit) => nit || 'No especificado',
     },
     {
       title: 'Dirección',
@@ -235,14 +369,20 @@ const CompaniesList = () => {
       key: 'legalRepresentatives',
       width: 250,
       render: (_, record) => {
-        if (record.legalRepresentatives && record.legalRepresentatives.length > 0) {
+        // Filtrar solo los períodos activos y extraer los representantes legales
+        const activeReps = record.legalRepPeriods ? 
+          record.legalRepPeriods
+            .filter(period => period.isActive)
+            .map(period => period.legalRepresentative) : [];
+            
+        if (activeReps && activeReps.length > 0) {
           return (
             <div>
-              {record.legalRepresentatives.map((rep, index) => (
+              {activeReps.map((rep, index) => (
                 <div key={rep.id} style={{ 
-                  marginBottom: index < record.legalRepresentatives.length - 1 ? '6px' : '0',
+                  marginBottom: index < activeReps.length - 1 ? '6px' : '0',
                   padding: '4px 0',
-                  borderBottom: index < record.legalRepresentatives.length - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < activeReps.length - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div style={{ fontWeight: 500, fontSize: '13px' }}>
                     {rep.firstName} {rep.lastName}
@@ -252,14 +392,14 @@ const CompaniesList = () => {
                   </div>
                 </div>
               ))}
-              {record.legalRepresentatives.length > 1 && (
+              {activeReps.length > 1 && (
                 <div style={{ 
                   fontSize: '11px', 
                   color: '#1890ff', 
                   marginTop: '4px',
                   fontWeight: 500
                 }}>
-                  {record.legalRepresentatives.length} representantes activos
+                  {activeReps.length} representantes activos
                 </div>
               )}
             </div>
@@ -278,10 +418,8 @@ const CompaniesList = () => {
             icon={<EyeOutlined />}
             size="small"
             onClick={() => navigate(`/companies/${record.id}`)}
-            title="Ver detalle"
           />
           <Button
-            type="primary"
             icon={<EditOutlined />}
             size="small"
             onClick={() => handleEdit(record)}
@@ -293,9 +431,9 @@ const CompaniesList = () => {
             cancelText="No"
           >
             <Button
-              danger
               icon={<DeleteOutlined />}
               size="small"
+              danger
             />
           </Popconfirm>
         </Space>
@@ -303,122 +441,90 @@ const CompaniesList = () => {
     },
   ];
 
-  if (loading) return <Spin size="large" />;
-  if (error) return <Alert message="Error" description={error} type="error" />;
+  if (error) {
+    return (
+      <div style={{ padding: '24px' }}>
+        <Alert message="Error" description={error} type="error" showIcon />
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '24px' }}>
-      {/* Breadcrumb */}
-      <Breadcrumb style={{ marginBottom: 16 }}>
+      <Breadcrumb style={{ marginBottom: '16px' }}>
         <Breadcrumb.Item>Inicio</Breadcrumb.Item>
-        <Breadcrumb.Item>Gestión de Empresas</Breadcrumb.Item>
-        <Breadcrumb.Item>Lista de empresas</Breadcrumb.Item>
+        <Breadcrumb.Item>Empresas</Breadcrumb.Item>
       </Breadcrumb>
 
-      {/* Header con título y botón nuevo */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '24px' 
+      }}>
         <Title level={2} style={{ margin: 0 }}>
-          Gestión de Empresas
+          Lista de Empresas
         </Title>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />} 
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
           onClick={handleCreate}
-          size="large"
           title="Presiona F2 para crear nueva empresa"
         >
           Nueva Empresa (F2)
         </Button>
       </div>
 
-      {/* Controles de DataTable */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        {/* Búsqueda global */}
-        <Col xs={24} sm={12} md={8}>
-          <Search
-            placeholder="Buscar empresas..."
-            allowClear
-            value={searchText}
-            onChange={(e) => onSearch(e.target.value)}
-            onSearch={onSearch}
-            style={{ width: '100%' }}
-            size="large"
-            enterButton="Buscar"
-          />
-        </Col>
-        
-        {/* Selector de registros por página */}
-        <Col xs={24} sm={12} md={4}>
-          <Select
-            style={{ width: '100%' }}
-            value={pagination.pageSize}
-            onChange={(value) => {
-              setPagination(prev => ({ ...prev, pageSize: value, current: 1 }));
-            }}
-            size="large"
-          >
-            <Option value={5}>5 por página</Option>
-            <Option value={10}>10 por página</Option>
-            <Option value={25}>25 por página</Option>
-            <Option value={50}>50 por página</Option>
-            <Option value={100}>100 por página</Option>
-          </Select>
-        </Col>
-        
-        {/* Botón limpiar filtros */}
-        <Col xs={24} sm={12} md={4}>
-          <Button 
-            icon={<ClearOutlined />} 
-            onClick={clearAllFilters}
-            disabled={appliedFilters.length === 0}
-            size="large"
-            style={{ width: '100%' }}
-          >
-            Limpiar Filtros
-          </Button>
-        </Col>
-        
-        {/* Información de registros */}
-        <Col xs={24} sm={12} md={8} style={{ textAlign: 'right' }}>
-          <Text type="secondary" style={{ fontSize: '14px', lineHeight: '40px' }}>
-            {filteredCompanies.length > 0 ? (
-              <>
-                Mostrando{' '}
-                <Text strong>
-                  {(pagination.current - 1) * pagination.pageSize + 1}-
-                  {Math.min(pagination.current * pagination.pageSize, filteredCompanies.length)}
-                </Text>{' '}
-                de <Text strong>{filteredCompanies.length}</Text> registros
-                {appliedFilters.length > 0 && (
-                  <>
-                    {' '}(filtrado de {companies.length} registros totales)
-                  </>
+      {/* Barra de búsqueda y filtros */}
+      <div style={{ 
+        marginBottom: '16px',
+        background: '#fafafa',
+        padding: '16px',
+        borderRadius: '6px',
+        border: '1px solid #d9d9d9'
+      }}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} sm={12} md={8} lg={6}>
+            <Search
+              placeholder="Buscar empresas..."
+              allowClear
+              value={searchText}
+              onChange={(e) => onSearch(e.target.value)}
+              onSearch={onSearch}
+              style={{ width: '100%' }}
+            />
+          </Col>
+          <Col>
+            {appliedFilters.length > 0 && (
+              <Space wrap>
+                <Text strong>Filtros aplicados:</Text>
+                {appliedFilters.includes('search') && (
+                  <Tag
+                    closable
+                    color="blue"
+                    onClose={() => clearFilter('search')}
+                  >
+                    Búsqueda: "{searchText}"
+                  </Tag>
                 )}
-              </>
-            ) : null}
-          </Text>
-        </Col>
-      </Row>
+                {appliedFilters.length > 1 && (
+                  <Button
+                    size="small"
+                    icon={<ClearOutlined />}
+                    onClick={clearAllFilters}
+                  >
+                    Limpiar todo
+                  </Button>
+                )}
+              </Space>
+            )}
+          </Col>
+        </Row>
+      </div>
 
-      {/* Tags de filtros activos */}
-      {appliedFilters.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <Text style={{ marginRight: 8 }}>Filtros activos:</Text>
-          {appliedFilters.includes('search') && searchText && (
-            <Tag 
-              closable 
-              onClose={() => clearFilter('search')}
-              color="blue"
-            >
-              Búsqueda: {searchText}
-            </Tag>
-          )}
-        </div>
-      )}
-      
-      <Table 
-        columns={columns} 
-        dataSource={filteredCompanies} 
+      <Table
+        columns={columns}
+        dataSource={filteredCompanies}
         rowKey="id"
         pagination={pagination}
         scroll={{ x: 1200 }}
@@ -477,6 +583,178 @@ const CompaniesList = () => {
           >
             <Input placeholder="Ingrese el teléfono" />
           </Form.Item>
+
+          {/* Opción para agregar representante al editar empresa */}
+          {editingCompany && !showRepSection && (
+            <Form.Item>
+              <Checkbox 
+                checked={showRepSection}
+                onChange={(e) => setShowRepSection(e.target.checked)}
+              >
+                Agregar nuevo representante legal a esta empresa
+              </Checkbox>
+            </Form.Item>
+          )}
+
+          {/* Sección de Representante Legal */}
+          {(!editingCompany || showRepSection) && (
+            <>
+              <Divider>
+                {editingCompany ? 'Agregar Nuevo Representante Legal' : 'Representante Legal'}
+              </Divider>
+              
+              {editingCompany && (
+                <Form.Item>
+                  <Alert
+                    message="Agregar representante legal"
+                    description="Esta acción agregará un nuevo período de representación para la empresa. Los representantes actuales permanecerán en el historial."
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                  />
+                </Form.Item>
+              )}
+              
+              <Form.Item
+                name="representativeModeSelection"
+                label={editingCompany ? "¿Cómo desea agregar el nuevo representante legal?" : "¿Cómo desea asignar el representante legal?"}
+              >
+                <Radio.Group 
+                  value={repMode} 
+                  onChange={(e) => setRepMode(e.target.value)}
+                  style={{ width: '100%' }}
+                >
+                  <Radio value="existing">Seleccionar representante existente</Radio>
+                  <Radio value="new">Crear nuevo representante</Radio>
+                </Radio.Group>
+              </Form.Item>
+
+              {repMode === 'existing' && (
+                <Form.Item
+                  name="legalRepresentativeId"
+                  label="Representante Legal"
+                  rules={editingCompany ? [] : [
+                    { required: true, message: 'Seleccione un representante legal' }
+                  ]}
+                >
+                  <Select
+                    placeholder="Seleccione un representante legal"
+                    loading={loadingReps}
+                    showSearch
+                    filterOption={(input, option) =>
+                      option.children.toLowerCase().includes(input.toLowerCase())
+                    }
+                  >
+                    {legalRepresentatives.map(rep => (
+                      <Option key={rep.id} value={rep.id}>
+                        {rep.firstName} {rep.lastName} - {rep.profession}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              )}
+
+              {repMode === 'new' && (
+                <>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item
+                        name="repFirstName"
+                        label="Nombres"
+                        rules={editingCompany ? [] : [
+                          { required: true, message: 'Los nombres son requeridos' }
+                        ]}
+                      >
+                        <Input placeholder="Nombres del representante" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item
+                        name="repLastName"
+                        label="Apellidos"
+                        rules={editingCompany ? [] : [
+                          { required: true, message: 'Los apellidos son requeridos' }
+                        ]}
+                      >
+                        <Input placeholder="Apellidos del representante" />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item
+                        name="repCui"
+                        label="CUI"
+                        rules={editingCompany ? [
+                          { len: 13, message: 'El CUI debe tener 13 dígitos' }
+                        ] : [
+                          { required: true, message: 'El CUI es requerido' },
+                          { len: 13, message: 'El CUI debe tener 13 dígitos' }
+                        ]}
+                      >
+                        <Input placeholder="1234567890123" maxLength={13} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item
+                        name="repBirthDate"
+                        label="Fecha de Nacimiento"
+                      >
+                        <DatePicker 
+                          style={{ width: '100%' }}
+                          placeholder="Seleccione la fecha"
+                          format="DD/MM/YYYY"
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
+                  <Form.Item
+                    name="repProfession"
+                    label="Profesión"
+                    rules={editingCompany ? [] : [
+                      { required: true, message: 'La profesión es requerida' }
+                    ]}
+                  >
+                    <Input placeholder="Profesión del representante" />
+                  </Form.Item>
+
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item
+                        name="repEmail"
+                        label="Email"
+                        rules={[
+                          { type: 'email', message: 'Email no válido' }
+                        ]}
+                      >
+                        <Input placeholder="email@ejemplo.com" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item
+                        name="repPhone"
+                        label="Teléfono"
+                      >
+                        <Input placeholder="Teléfono del representante" />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
+                  <Form.Item
+                    name="repAddress"
+                    label="Dirección"
+                  >
+                    <TextArea 
+                      rows={2} 
+                      placeholder="Dirección del representante" 
+                    />
+                  </Form.Item>
+                </>
+              )}
+            </>
+          )}
 
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Space>

@@ -9,11 +9,16 @@ router.get('/', async (req, res) => {
   try {
     const companies = await db.Company.findAll({
       include: [{
-        model: db.LegalRepresentative,
-        as: 'legalRepresentatives',
+        model: db.LegalRepCompanyPeriod,
+        as: 'legalRepPeriods',
         where: { isActive: true },
         required: false,
-        attributes: ['id', 'firstName', 'lastName', 'cui', 'profession', 'startDate']
+        include: [{
+          model: db.LegalRepresentative,
+          as: 'legalRepresentative',
+          attributes: ['id', 'firstName', 'lastName', 'cui', 'profession']
+        }],
+        attributes: ['id', 'startDate', 'endDate', 'isActive']
       }],
       order: [['id', 'ASC']]
     });
@@ -29,11 +34,16 @@ router.get('/:id', async (req, res) => {
   try {
     const company = await db.Company.findByPk(req.params.id, {
       include: [{
-        model: db.LegalRepresentative,
-        as: 'legalRepresentatives',
+        model: db.LegalRepCompanyPeriod,
+        as: 'legalRepPeriods',
         where: { isActive: true },
         required: false,
-        attributes: ['id', 'firstName', 'lastName', 'cui', 'profession', 'startDate']
+        include: [{
+          model: db.LegalRepresentative,
+          as: 'legalRepresentative',
+          attributes: ['id', 'firstName', 'lastName', 'cui', 'profession']
+        }],
+        attributes: ['id', 'startDate', 'endDate', 'isActive']
       }]
     });
     if (!company) {

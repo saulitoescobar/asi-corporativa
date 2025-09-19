@@ -72,11 +72,59 @@ const LegalRepresentativesList = () => {
       const response = await fetch('http://localhost:3001/api/legal-representatives');
       if (response.ok) {
         const data = await response.json();
-        setRepresentatives(data);
-        setFilteredRepresentatives(data);
+        
+        // Transformar datos para compatibilidad con estructura anterior
+        const transformedData = data.flatMap(rep => {
+          if (rep.companyPeriods && rep.companyPeriods.length > 0) {
+            // Crear un registro por cada período de empresa
+            return rep.companyPeriods.map(period => ({
+              id: `${rep.id}-${period.id}`, // ID único para cada período
+              originalId: rep.id, // ID original del representante
+              periodId: period.id,
+              firstName: rep.firstName,
+              lastName: rep.lastName,
+              cui: rep.cui,
+              birthDate: rep.birthDate,
+              profession: rep.profession,
+              email: rep.email,
+              phone: rep.phone,
+              address: rep.address,
+              company: period.company,
+              companyId: period.companyId,
+              startDate: period.startDate,
+              endDate: period.endDate,
+              isActive: period.isActive,
+              notes: period.notes
+            }));
+          } else {
+            // Representante sin períodos de empresa
+            return [{
+              id: rep.id,
+              originalId: rep.id,
+              periodId: null,
+              firstName: rep.firstName,
+              lastName: rep.lastName,
+              cui: rep.cui,
+              birthDate: rep.birthDate,
+              profession: rep.profession,
+              email: rep.email,
+              phone: rep.phone,
+              address: rep.address,
+              company: null,
+              companyId: null,
+              startDate: null,
+              endDate: null,
+              isActive: false,
+              notes: null
+            }];
+          }
+        });
+        
+        setRepresentatives(transformedData);
+        setFilteredRepresentatives(transformedData);
         setPagination(prev => ({
           ...prev,
-          total: data.length
+          total: transformedData.length
         }));
       } else {
         message.error('Error al cargar los representantes legales');
@@ -93,14 +141,23 @@ const LegalRepresentativesList = () => {
   const filterRepresentatives = () => {
     let filtered = [...representatives];
     
-    if (searchText) {
-      filtered = filtered.filter(rep =>
-        rep.firstName?.toLowerCase().includes(searchText.toLowerCase()) ||
-        rep.lastName?.toLowerCase().includes(searchText.toLowerCase()) ||
-        rep.email?.toLowerCase().includes(searchText.toLowerCase()) ||
-        rep.profession?.toLowerCase().includes(searchText.toLowerCase()) ||
-        rep.company?.name?.toLowerCase().includes(searchText.toLowerCase())
-      );
+    if (searchText && typeof searchText === 'string' && searchText.trim() !== '') {
+      const searchLower = (searchText || '').toString().toLowerCase();
+      filtered = filtered.filter(rep => {
+        if (!rep) return false;
+        
+        const firstName = (rep.firstName || '').toString().toLowerCase();
+        const lastName = (rep.lastName || '').toString().toLowerCase();
+        const email = (rep.email || '').toString().toLowerCase();
+        const profession = (rep.profession || '').toString().toLowerCase();
+        const companyName = (rep.company?.name || '').toString().toLowerCase();
+        
+        return firstName.includes(searchLower) ||
+               lastName.includes(searchLower) ||
+               email.includes(searchLower) ||
+               profession.includes(searchLower) ||
+               companyName.includes(searchLower);
+      });
     }
     
     setFilteredRepresentatives(filtered);
@@ -124,16 +181,20 @@ const LegalRepresentativesList = () => {
   };
 
   const onSearch = (value) => {
-    setSearchText(value);
-    if (value && !appliedFilters.includes('search')) {
+    // Validar y sanitizar el valor de entrada
+    const sanitizedValue = value && typeof value === 'string' ? value : (value ? String(value) : '');
+    setSearchText(sanitizedValue);
+    if (sanitizedValue && !appliedFilters.includes('search')) {
       setAppliedFilters(prev => [...prev, 'search']);
-    } else if (!value) {
+    } else if (!sanitizedValue) {
       setAppliedFilters(prev => prev.filter(f => f !== 'search'));
     }
   };
 
   useEffect(() => {
-    filterRepresentatives();
+    if (Array.isArray(representatives) && searchText !== undefined) {
+      filterRepresentatives();
+    }
   }, [representatives, searchText]);
 
   // Cargar empresas para el selector

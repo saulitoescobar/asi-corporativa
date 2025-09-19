@@ -381,6 +381,8 @@ export default function LinesList() {
       startDate: line.startDate ? dayjs(line.startDate) : null,
       renewalDate: line.renewalDate ? dayjs(line.renewalDate) : null,
       assignmentDate: line.assignmentDate ? dayjs(line.assignmentDate) : null,
+      monthlyCost: line.monthlyCost || '',
+      notes: line.notes || '',
     });
     setModalVisible(true);
     fetchOptionsData();
@@ -539,6 +541,25 @@ export default function LinesList() {
           );
         }
         return '-';
+      },
+    },
+    {
+      title: 'Costo Mensual',
+      dataIndex: 'monthlyCost',
+      key: 'monthlyCost',
+      render: (cost) => {
+        if (cost && cost > 0) {
+          return (
+            <span style={{ fontWeight: 'bold', color: '#52c41a' }}>
+              Q{parseFloat(cost).toFixed(2)}
+            </span>
+          );
+        }
+        return (
+          <span style={{ color: '#8c8c8c', fontStyle: 'italic' }}>
+            No especificado
+          </span>
+        );
       },
     },
     {
@@ -1258,6 +1279,41 @@ export default function LinesList() {
                   format="DD/MM/YYYY"
                   placeholder="Se calcula automáticamente"
                   disabled
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Costo Mensual (Q)"
+                name="monthlyCost"
+                rules={[
+                  { required: true, message: 'Por favor ingresa el costo mensual' },
+                  { pattern: /^\d+(\.\d{1,2})?$/, message: 'Ingresa un número válido (ej: 150.00)' }
+                ]}
+              >
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Ej: 150.00"
+                  style={{ width: '100%' }}
+                  prefix="Q"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Notas (Opcional)"
+                name="notes"
+              >
+                <Input.TextArea
+                  placeholder="Notas adicionales sobre la línea..."
+                  rows={3}
+                  maxLength={500}
+                  showCount
                 />
               </Form.Item>
             </Col>
