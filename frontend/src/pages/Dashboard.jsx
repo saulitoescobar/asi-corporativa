@@ -312,8 +312,8 @@ export default function Dashboard() {
                 strokeColor="#52c41a"
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                <Text type="secondary">{stats.activeLines} activas</Text>
-                <Text type="secondary">{stats.totalLines - stats.activeLines} inactivas</Text>
+                <Text style={{ color: '#52c41a', fontWeight: 'bold' }}>{stats.activeLines} activas</Text>
+                <Text style={{ color: '#fa8c16', fontWeight: 'bold' }}>{stats.totalLines - stats.activeLines} inactivas</Text>
               </div>
             </div>
             

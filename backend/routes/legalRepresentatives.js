@@ -397,4 +397,207 @@ router.patch('/:id/toggle-active', async (req, res) => {
   }
 });
 
+// POST - Asignar un representante legal existente a una empresa
+router.post('/assign', async (req, res) => {
+  console.log('POST /api/legal-representatives/assign called');
+  console.log('Request body:', req.body);
+  
+  try {
+    const { legalRepresentativeId, companyId, startDate, endDate, notes } = req.body;
+    
+    console.log('Extracted fields:', { legalRepresentativeId, companyId, startDate, endDate, notes });
+    
+    // Validaciones básicas
+    if (!legalRepresentativeId || !companyId || !startDate) {
+      console.log('Validation failed: missing required fields');
+      return res.status(400).json({ 
+        error: 'Los campos representante legal, empresa y fecha de inicio son obligatorios' 
+      });
+    }
+
+    // Verificar que el representante legal existe
+    console.log('Checking legal representative existence for ID:', legalRepresentativeId);
+    const representative = await db.LegalRepresentative.findByPk(legalRepresentativeId);
+    if (!representative) {
+      console.log('Legal representative not found');
+      return res.status(400).json({ error: 'El representante legal especificado no existe' });
+    }
+
+    // Verificar que la empresa existe
+    console.log('Checking company existence for ID:', companyId);
+    const company = await db.Company.findByPk(companyId);
+    if (!company) {
+      console.log('Company not found');
+      return res.status(400).json({ error: 'La empresa especificada no existe' });
+    }
+
+    // Verificar que no haya conflicto de fechas para el mismo representante en la misma empresa
+    const conflictingPeriod = await db.LegalRepCompanyPeriod.findOne({ 
+      where: { 
+        legalRepresentativeId,
+        companyId,
+        [Sequelize.Op.or]: [
+          // Caso 1: Nuevo período se solapa con período existente que no tiene fecha fin
+          {
+            endDate: null,
+            startDate: { [Sequelize.Op.lte]: endDate || new Date() }
+          },
+          // Caso 2: Nuevo período se solapa con período existente que tiene fecha fin
+          {
+            endDate: { [Sequelize.Op.gte]: startDate },
+            startDate: { [Sequelize.Op.lte]: endDate || new Date() }
+          }
+        ]
+      }
+    });
+
+    if (conflictingPeriod) {
+      return res.status(400).json({ 
+        error: 'Ya existe un período activo para este representante legal en esta empresa que se solapa con las fechas especificadas' 
+      });
+    }
+
+    // Crear el período de empresa
+    const isActive = !endDate;
+    const period = await db.LegalRepCompanyPeriod.create({
+      legalRepresentativeId,
+      companyId,
+      startDate,
+      endDate,
+      isActive,
+      notes: notes || ''
+    });
+
+    console.log('Period created successfully:', period.id);
+
+    // Obtener el período creado con sus relaciones
+    const createdPeriod = await db.LegalRepCompanyPeriod.findByPk(period.id, {
+      include: [{
+        model: db.LegalRepresentative,
+        as: 'legalRepresentative'
+      }, {
+        model: db.Company,
+        as: 'company'
+      }]
+    });
+
+    res.status(201).json(createdPeriod);
+  } catch (error) {
+    console.error('Error assigning legal representative:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// POST - Crear un nuevo representante legal y asignarlo a una empresa
+router.post('/create-and-assign', async (req, res) => {
+  console.log('POST /api/legal-representatives/create-and-assign called');
+  console.log('Request body:', req.body);
+  
+  try {
+    const { 
+      firstName, lastName, cui, birthDate, profession, email, phone, address,
+      companyId, startDate, endDate, notes 
+    } = req.body;
+    
+    console.log('Extracted fields:', { firstName, lastName, cui, birthDate, profession, companyId, startDate, endDate });
+    
+    // Validaciones básicas
+    if (!firstName || !lastName || !cui || !profession || !companyId || !startDate) {
+      console.log('Validation failed: missing required fields');
+      return res.status(400).json({ 
+        error: 'Los campos nombre, apellido, CUI, profesión, empresa y fecha de inicio son obligatorios' 
+      });
+    }
+
+    // Verificar que la empresa existe
+    console.log('Checking company existence for ID:', companyId);
+    const company = await db.Company.findByPk(companyId);
+    if (!company) {
+      console.log('Company not found');
+      return res.status(400).json({ error: 'La empresa especificada no existe' });
+    }
+
+    // Verificar si ya existe un representante legal con el mismo CUI
+    const existingRepresentative = await db.LegalRepresentative.findOne({ 
+      where: { cui }
+    });
+
+    let representative;
+    
+    if (existingRepresentative) {
+      // Si ya existe, usar el existente
+      representative = existingRepresentative;
+      console.log('Using existing representative:', representative.id);
+    } else {
+      // Si no existe, crear uno nuevo
+      representative = await db.LegalRepresentative.create({
+        firstName,
+        lastName,
+        cui,
+        birthDate,
+        profession,
+        email: email || '',
+        phone: phone || '',
+        address: address || ''
+      });
+      console.log('Created new representative:', representative.id);
+    }
+
+    // Verificar que no haya conflicto de fechas para el mismo representante en la misma empresa
+    const conflictingPeriod = await db.LegalRepCompanyPeriod.findOne({ 
+      where: { 
+        legalRepresentativeId: representative.id,
+        companyId,
+        [Sequelize.Op.or]: [
+          // Caso 1: Nuevo período se solapa con período existente que no tiene fecha fin
+          {
+            endDate: null,
+            startDate: { [Sequelize.Op.lte]: endDate || new Date() }
+          },
+          // Caso 2: Nuevo período se solapa con período existente que tiene fecha fin
+          {
+            endDate: { [Sequelize.Op.gte]: startDate },
+            startDate: { [Sequelize.Op.lte]: endDate || new Date() }
+          }
+        ]
+      }
+    });
+
+    if (conflictingPeriod) {
+      return res.status(400).json({ 
+        error: 'Ya existe un período activo para este representante legal en esta empresa que se solapa con las fechas especificadas' 
+      });
+    }
+
+    // Crear el período de empresa
+    const isActive = !endDate;
+    const period = await db.LegalRepCompanyPeriod.create({
+      legalRepresentativeId: representative.id,
+      companyId,
+      startDate,
+      endDate,
+      isActive,
+      notes: notes || ''
+    });
+
+    console.log('Period created successfully:', period.id);
+
+    // Obtener el período creado con sus relaciones
+    const createdPeriod = await db.LegalRepCompanyPeriod.findByPk(period.id, {
+      include: [{
+        model: db.LegalRepresentative,
+        as: 'legalRepresentative'
+      }, {
+        model: db.Company,
+        as: 'company'
+      }]
+    });
+
+    res.status(201).json(createdPeriod);
+  } catch (error) {
+    console.error('Error creating and assigning legal representative:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 module.exports = router;

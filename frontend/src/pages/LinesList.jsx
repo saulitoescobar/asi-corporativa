@@ -408,6 +408,31 @@ export default function LinesList() {
     }
   };
 
+  // Cambiar estado de línea (activar/desactivar)
+  const handleToggleStatus = async (line) => {
+    try {
+      const newStatus = line.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+      const response = await fetch(`http://localhost:3001/api/lines/${line.id}/toggle-status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al cambiar el estado de la línea');
+      }
+
+      message.success(`Línea ${newStatus === 'ACTIVE' ? 'activada' : 'desactivada'} exitosamente`);
+      fetchLines();
+    } catch (error) {
+      console.error('Error toggling line status:', error);
+      message.error(error.message);
+    }
+  };
+
   const columns = [
     {
       title: 'ID de la línea',
@@ -544,25 +569,6 @@ export default function LinesList() {
       },
     },
     {
-      title: 'Costo Mensual',
-      dataIndex: 'monthlyCost',
-      key: 'monthlyCost',
-      render: (cost) => {
-        if (cost && cost > 0) {
-          return (
-            <span style={{ fontWeight: 'bold', color: '#52c41a' }}>
-              Q{parseFloat(cost).toFixed(2)}
-            </span>
-          );
-        }
-        return (
-          <span style={{ color: '#8c8c8c', fontStyle: 'italic' }}>
-            No especificado
-          </span>
-        );
-      },
-    },
-    {
       title: 'Estado',
       dataIndex: 'status',
       key: 'status',
@@ -588,6 +594,15 @@ export default function LinesList() {
             icon={<EditOutlined />} 
             onClick={() => handleEdit(record)}
             title="Editar línea"
+          />
+          <Button 
+            type="link" 
+            icon={record.status === 'ACTIVE' ? <PauseCircleOutlined /> : <CheckCircleOutlined />}
+            onClick={() => handleToggleStatus(record)}
+            title={record.status === 'ACTIVE' ? 'Desactivar línea' : 'Activar línea'}
+            style={{ 
+              color: record.status === 'ACTIVE' ? '#fa8c16' : '#52c41a' 
+            }}
           />
           <Popconfirm
             title="¿Estás seguro de eliminar esta línea?"
@@ -1285,26 +1300,7 @@ export default function LinesList() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Costo Mensual (Q)"
-                name="monthlyCost"
-                rules={[
-                  { required: true, message: 'Por favor ingresa el costo mensual' },
-                  { pattern: /^\d+(\.\d{1,2})?$/, message: 'Ingresa un número válido (ej: 150.00)' }
-                ]}
-              >
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="Ej: 150.00"
-                  style={{ width: '100%' }}
-                  prefix="Q"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
+            <Col span={24}>
               <Form.Item
                 label="Notas (Opcional)"
                 name="notes"

@@ -29,6 +29,7 @@ import {
   DeleteOutlined, 
   EyeOutlined,
   ClearOutlined,
+  BankOutlined,
 } from '@ant-design/icons';
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
 
@@ -456,71 +457,107 @@ const CompaniesList = () => {
         <Breadcrumb.Item>Empresas</Breadcrumb.Item>
       </Breadcrumb>
 
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '24px' 
-      }}>
+      {/* Header con título y botón nuevo */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <Title level={2} style={{ margin: 0 }}>
+          <BankOutlined style={{ marginRight: 8 }} />
           Lista de Empresas
         </Title>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleCreate}
+          size="large"
           title="Presiona F2 para crear nueva empresa"
         >
           Nueva Empresa (F2)
         </Button>
       </div>
 
-      {/* Barra de búsqueda y filtros */}
-      <div style={{ 
-        marginBottom: '16px',
-        background: '#fafafa',
-        padding: '16px',
-        borderRadius: '6px',
-        border: '1px solid #d9d9d9'
-      }}>
-        <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Search
-              placeholder="Buscar empresas..."
-              allowClear
-              value={searchText}
-              onChange={(e) => onSearch(e.target.value)}
-              onSearch={onSearch}
-              style={{ width: '100%' }}
-            />
-          </Col>
-          <Col>
-            {appliedFilters.length > 0 && (
-              <Space wrap>
-                <Text strong>Filtros aplicados:</Text>
-                {appliedFilters.includes('search') && (
-                  <Tag
-                    closable
-                    color="blue"
-                    onClose={() => clearFilter('search')}
-                  >
-                    Búsqueda: "{searchText}"
-                  </Tag>
+      {/* Controles de DataTable */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        {/* Búsqueda global */}
+        <Col xs={24} sm={12} md={8}>
+          <Search
+            placeholder="Buscar empresas..."
+            allowClear
+            value={searchText}
+            onChange={(e) => onSearch(e.target.value)}
+            onSearch={onSearch}
+            style={{ width: '100%' }}
+            size="large"
+            enterButton="Buscar"
+          />
+        </Col>
+        
+        {/* Selector de registros por página */}
+        <Col xs={24} sm={12} md={4}>
+          <Select
+            style={{ width: '100%' }}
+            value={pagination.pageSize}
+            onChange={(value) => {
+              setPagination(prev => ({ ...prev, pageSize: value, current: 1 }));
+            }}
+            size="large"
+          >
+            <Option value={5}>5 por página</Option>
+            <Option value={10}>10 por página</Option>
+            <Option value={25}>25 por página</Option>
+            <Option value={50}>50 por página</Option>
+            <Option value={100}>100 por página</Option>
+          </Select>
+        </Col>
+        
+        {/* Botón limpiar filtros */}
+        <Col xs={24} sm={12} md={4}>
+          <Button 
+            icon={<ClearOutlined />} 
+            onClick={clearAllFilters}
+            disabled={appliedFilters.length === 0}
+            size="large"
+            style={{ width: '100%' }}
+          >
+            Limpiar Filtros
+          </Button>
+        </Col>
+        
+        {/* Información de registros */}
+        <Col xs={24} sm={12} md={8} style={{ textAlign: 'right' }}>
+          <Text type="secondary" style={{ fontSize: '14px', lineHeight: '40px' }}>
+            {filteredCompanies.length > 0 ? (
+              <>
+                Mostrando{' '}
+                <Text strong>
+                  {(pagination.current - 1) * pagination.pageSize + 1}-
+                  {Math.min(pagination.current * pagination.pageSize, filteredCompanies.length)}
+                </Text>{' '}
+                de <Text strong>{filteredCompanies.length}</Text> registros
+                {appliedFilters.length > 0 && (
+                  <>
+                    {' '}(filtrado de {companies.length} registros totales)
+                  </>
                 )}
-                {appliedFilters.length > 1 && (
-                  <Button
-                    size="small"
-                    icon={<ClearOutlined />}
-                    onClick={clearAllFilters}
-                  >
-                    Limpiar todo
-                  </Button>
-                )}
-              </Space>
-            )}
-          </Col>
-        </Row>
-      </div>
+              </>
+            ) : null}
+          </Text>
+        </Col>
+      </Row>
+
+      {/* Tags de filtros activos */}
+      {appliedFilters.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <Text style={{ marginRight: 8 }}>Filtros activos:</Text>
+          {appliedFilters.includes('search') && searchText && (
+            <Tag 
+              closable 
+              onClose={() => clearFilter('search')}
+              color="blue"
+            >
+              Búsqueda: {searchText}
+            </Tag>
+          )}
+        </div>
+      )}
 
       <Table
         columns={columns}

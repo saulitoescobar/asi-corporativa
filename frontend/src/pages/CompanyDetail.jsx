@@ -19,6 +19,7 @@ import {
   Spin,
   Alert,
   Typography,
+  Radio,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -42,6 +43,9 @@ const CompanyDetail = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRepresentative, setEditingRepresentative] = useState(null);
   const [form] = Form.useForm();
+  const [allLegalRepresentatives, setAllLegalRepresentatives] = useState([]);
+  const [repMode, setRepMode] = useState('existing');
+  const [loadingReps, setLoadingReps] = useState(false);
 
   // Cargar información de la empresa
   const fetchCompany = async () => {
@@ -98,6 +102,25 @@ const CompanyDetail = () => {
     }
   };
 
+  // Cargar representantes legales disponibles
+  const fetchLegalRepresentatives = async () => {
+    setLoadingReps(true);
+    try {
+      const response = await fetch('http://localhost:3001/api/legal-representatives');
+      if (response.ok) {
+        const data = await response.json();
+        setAllLegalRepresentatives(data);
+      } else {
+        message.error('Error al cargar representantes legales');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      message.error('Error de conexión');
+    } finally {
+      setLoadingReps(false);
+    }
+  };
+
   useEffect(() => {
     if (id) {
       fetchCompany();
@@ -114,42 +137,101 @@ const CompanyDetail = () => {
   // Manejar envío del formulario
   const handleSubmit = async (values) => {
     try {
-      const formattedValues = {
-        ...values,
-        companyId: parseInt(id),
-        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
-        startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : null,
-        endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null,
-      };
+      if (editingRepresentative) {
+        // Lógica de edición existente
+        const formattedValues = {
+          ...values,
+          companyId: parseInt(id),
+          birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
+          startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : null,
+          endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null,
+        };
 
-      const url = editingRepresentative
-        ? `http://localhost:3001/api/legal-representatives/${editingRepresentative.id}`
-        : 'http://localhost:3001/api/legal-representatives';
+        const response = await fetch(`http://localhost:3001/api/legal-representatives/${editingRepresentative.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formattedValues),
+        });
 
-      const method = editingRepresentative ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formattedValues),
-      });
-
-      if (response.ok) {
-        message.success(
-          editingRepresentative
-            ? 'Representante legal actualizado exitosamente'
-            : 'Representante legal agregado exitosamente'
-        );
-        setModalVisible(false);
-        setEditingRepresentative(null);
-        form.resetFields();
-        fetchRepresentatives();
-        fetchCompany(); // Refrescar también la info de la empresa
+        if (response.ok) {
+          message.success('Representante legal actualizado exitosamente');
+          setModalVisible(false);
+          setEditingRepresentative(null);
+          form.resetFields();
+          fetchRepresentatives();
+          fetchCompany();
+        } else {
+          const errorData = await response.json();
+          message.error(errorData.error || 'Error al actualizar el representante');
+        }
       } else {
-        const errorData = await response.json();
-        message.error(errorData.error || 'Error al procesar la solicitud');
+        // Lógica para agregar nuevo representante
+        if (repMode === 'existing') {
+          // Asignar representante existente
+          const periodData = {
+            companyId: parseInt(id),
+            legalRepresentativeId: values.legalRepresentativeId,
+            startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : null,
+            endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null,
+            notes: values.notes || ''
+          };
+
+          const response = await fetch('http://localhost:3001/api/legal-representatives/assign', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(periodData),
+          });
+
+          if (response.ok) {
+            message.success('Representante legal asignado exitosamente');
+            setModalVisible(false);
+            form.resetFields();
+            fetchRepresentatives();
+            fetchCompany();
+          } else {
+            const errorData = await response.json();
+            message.error(errorData.error || 'Error al asignar el representante');
+          }
+        } else {
+          // Crear nuevo representante
+          const repData = {
+            firstName: values.firstName,
+            lastName: values.lastName,
+            cui: values.cui,
+            birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
+            profession: values.profession,
+            email: values.email || '',
+            phone: values.phone || '',
+            address: values.address || '',
+            companyId: parseInt(id),
+            startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : null,
+            endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null,
+            notes: values.notes || ''
+          };
+
+          const response = await fetch('http://localhost:3001/api/legal-representatives/create-and-assign', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(repData),
+          });
+
+          if (response.ok) {
+            message.success('Representante legal creado y asignado exitosamente');
+            setModalVisible(false);
+            form.resetFields();
+            fetchRepresentatives();
+            fetchCompany();
+          } else {
+            const errorData = await response.json();
+            message.error(errorData.error || 'Error al crear el representante');
+          }
+        }
       }
     } catch (error) {
       console.error('Error:', error);
@@ -217,14 +299,17 @@ const CompanyDetail = () => {
   // Manejar apertura de modal para nuevo representante
   const handleAdd = () => {
     setEditingRepresentative(null);
+    setRepMode('existing');
     form.resetFields();
     setModalVisible(true);
+    fetchLegalRepresentatives();
   };
 
   // Cerrar modal
   const handleCancel = () => {
     setModalVisible(false);
     setEditingRepresentative(null);
+    setRepMode('existing');
     form.resetFields();
   };
 
@@ -439,77 +524,128 @@ const CompanyDetail = () => {
           layout="vertical"
           onFinish={handleSubmit}
         >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="firstName"
-                label="Nombre"
-                rules={[
-                  { required: true, message: 'El nombre es obligatorio' },
-                  { max: 50, message: 'El nombre no puede exceder 50 caracteres' }
-                ]}
+          {!editingRepresentative && (
+            <Form.Item
+              label="¿Cómo desea agregar el representante legal?"
+            >
+              <Radio.Group 
+                value={repMode} 
+                onChange={(e) => setRepMode(e.target.value)}
+                style={{ width: '100%' }}
               >
-                <Input placeholder="Ingrese el nombre" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="lastName"
-                label="Apellido"
-                rules={[
-                  { required: true, message: 'El apellido es obligatorio' },
-                  { max: 50, message: 'El apellido no puede exceder 50 caracteres' }
-                ]}
-              >
-                <Input placeholder="Ingrese el apellido" />
-              </Form.Item>
-            </Col>
-          </Row>
+                <Radio value="existing">Seleccionar representante existente</Radio>
+                <Radio value="new">Crear nuevo representante</Radio>
+              </Radio.Group>
+            </Form.Item>
+          )}
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="cui"
-                label="CUI"
-                rules={[
-                  { required: true, message: 'El CUI es obligatorio' },
-                  { 
-                    pattern: /^\d{13}$/, 
-                    message: 'El CUI debe tener exactamente 13 dígitos' 
-                  }
-                ]}
+          {!editingRepresentative && repMode === 'existing' && (
+            <Form.Item
+              name="legalRepresentativeId"
+              label="Representante Legal"
+              rules={[
+                { required: true, message: 'Seleccione un representante legal' }
+              ]}
+            >
+              <Select
+                placeholder="Seleccione un representante legal"
+                loading={loadingReps}
+                showSearch
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().includes(input.toLowerCase())
+                }
               >
-                <Input placeholder="Ingrese el CUI (13 dígitos)" maxLength={13} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="birthDate"
-                label="Fecha de Nacimiento"
-                rules={[
-                  { required: true, message: 'La fecha de nacimiento es obligatoria' }
-                ]}
-              >
-                <DatePicker 
-                  style={{ width: '100%' }}
-                  placeholder="Seleccione la fecha"
-                  format="DD/MM/YYYY"
-                  disabledDate={(current) => current && current > dayjs().endOf('day')}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+                {allLegalRepresentatives.map(rep => (
+                  <Option key={rep.id} value={rep.id}>
+                    {rep.firstName} {rep.lastName} - {rep.profession}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          )}
 
-          <Form.Item
-            name="profession"
-            label="Profesión"
-            rules={[
-              { required: true, message: 'La profesión es obligatoria' },
-              { max: 100, message: 'La profesión no puede exceder 100 caracteres' }
-            ]}
-          >
-            <Input placeholder="Ingrese la profesión" />
-          </Form.Item>
+          {(editingRepresentative || repMode === 'new') && (
+            <>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name={editingRepresentative ? "firstName" : "firstName"}
+                    label="Nombre"
+                    rules={[
+                      { required: true, message: 'El nombre es obligatorio' },
+                      { max: 50, message: 'El nombre no puede exceder 50 caracteres' }
+                    ]}
+                  >
+                    <Input placeholder="Ingrese el nombre" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name={editingRepresentative ? "lastName" : "lastName"}
+                    label="Apellido"
+                    rules={[
+                      { required: true, message: 'El apellido es obligatorio' },
+                      { max: 50, message: 'El apellido no puede exceder 50 caracteres' }
+                    ]}
+                  >
+                    <Input placeholder="Ingrese el apellido" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name={editingRepresentative ? "cui" : "cui"}
+                    label="CUI"
+                    rules={[
+                      { required: true, message: 'El CUI es obligatorio' },
+                      { 
+                        pattern: /^\d{13}$/, 
+                        message: 'El CUI debe tener exactamente 13 dígitos' 
+                      }
+                    ]}
+                  >
+                    <Input placeholder="Ingrese el CUI (13 dígitos)" maxLength={13} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name={editingRepresentative ? "birthDate" : "birthDate"}
+                    label="Fecha de Nacimiento"
+                  >
+                    <DatePicker 
+                      style={{ width: '100%' }}
+                      placeholder="Seleccione la fecha"
+                      format="DD/MM/YYYY"
+                      disabledDate={(current) => current && current > dayjs().endOf('day')}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name={editingRepresentative ? "profession" : "profession"}
+                label="Profesión"
+                rules={[
+                  { required: true, message: 'La profesión es obligatoria' },
+                  { max: 100, message: 'La profesión no puede exceder 100 caracteres' }
+                ]}
+              >
+                <Input placeholder="Ingrese la profesión" />
+              </Form.Item>
+            </>
+          )}
+
+          {!editingRepresentative && repMode === 'existing' && (
+            <Form.Item
+              name="companyId"
+              label="Empresa"
+              initialValue={company?.name}
+            >
+              <Input disabled value={company?.name} />
+            </Form.Item>
+          )}
 
           <Row gutter={16}>
             <Col span={12}>

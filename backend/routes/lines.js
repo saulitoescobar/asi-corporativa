@@ -266,4 +266,47 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Cambiar estado de línea (activar/desactivar)
+router.patch('/:id/toggle-status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    // Validar que el estado sea válido
+    if (!status || !['ACTIVE', 'INACTIVE'].includes(status)) {
+      return res.status(400).json({ error: 'Estado inválido. Debe ser ACTIVE o INACTIVE' });
+    }
+    
+    const line = await db.Line.findByPk(id);
+    if (!line) {
+      return res.status(404).json({ error: 'Línea no encontrada' });
+    }
+
+    // Actualizar el estado
+    await line.update({ status });
+    
+    // Obtener la línea actualizada con todas sus relaciones
+    const updatedLine = await db.Line.findByPk(id, {
+      include: [
+        { 
+          model: db.User, 
+          as: 'user', 
+          include: [
+            { model: db.Company, as: 'company' },
+            { model: db.Position, as: 'position' }
+          ]
+        },
+        { model: db.Plan, as: 'plan' },
+        { model: db.Telco, as: 'telco' },
+        { model: db.Advisor, as: 'advisor' }
+      ]
+    });
+    
+    res.json(updatedLine);
+  } catch (err) {
+    console.error('Error updating line status:', err);
+    res.status(500).json({ error: 'Error al actualizar el estado de la línea' });
+  }
+});
+
 module.exports = router;
