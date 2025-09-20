@@ -51,9 +51,9 @@ function MainLayout() {
             onMouseLeave={(e) => e.target.style.opacity = '1'}
           >
             <img 
-              src="/img/logo_site.svg" 
+              src="/logo_asi.svg" 
               alt="ASI Corporativa - Home" 
-              style={{ maxHeight: '50px', maxWidth: '100%', objectFit: 'contain' }}
+              style={{ maxHeight: '45px', maxWidth: '100%', objectFit: 'contain' }}
             />
           </div>
         </div>

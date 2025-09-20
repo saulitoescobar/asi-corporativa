@@ -35,7 +35,8 @@ export default function Dashboard() {
     activeLines: 0,
     totalCompanies: 0,
     monthlyExpense: 0,
-    upcomingRenewals: []
+    upcomingRenewals: [],
+    expiredLines: []
   });
 
   useEffect(() => {
@@ -81,13 +82,25 @@ export default function Dashboard() {
         .sort((a, b) => dayjs(a.renewalDate).diff(dayjs(b.renewalDate)))
         .slice(0, 10); // Mostrar solo las 10 más próximas
 
+      // Líneas vencidas (fechas de renovación pasadas)
+      const expiredLines = lines
+        .filter(line => {
+          if (!line.renewalDate) return false;
+          const renewalDate = dayjs(line.renewalDate);
+          const daysUntilRenewal = renewalDate.diff(today, 'days');
+          return daysUntilRenewal < 0; // Fechas en el pasado
+        })
+        .sort((a, b) => dayjs(b.renewalDate).diff(dayjs(a.renewalDate))) // Más recientes primero
+        .slice(0, 10); // Mostrar solo las 10 más críticas
+
       setStats({
         totalUsers: users.length,
         totalLines: lines.length,
         activeLines: activeLines.length,
         totalCompanies: companies.length,
         monthlyExpense: monthlyExpense,
-        upcomingRenewals: upcomingRenewals
+        upcomingRenewals: upcomingRenewals,
+        expiredLines: expiredLines
       });
 
     } catch (error) {
@@ -151,6 +164,56 @@ export default function Dashboard() {
     }
   ];
 
+  // Columnas para la tabla de líneas vencidas
+  const expiredColumns = [
+    {
+      title: 'Línea',
+      dataIndex: 'lineNumber',
+      key: 'lineNumber',
+      render: (lineNumber) => (
+        <Text strong style={{ color: '#ff4d4f' }}>{lineNumber}</Text>
+      )
+    },
+    {
+      title: 'Usuario',
+      key: 'user',
+      render: (_, record) => {
+        if (record.user) {
+          return `${record.user.firstName} ${record.user.lastName}`;
+        }
+        return 'No asignado';
+      }
+    },
+    {
+      title: 'Plan',
+      key: 'plan',
+      render: (_, record) => {
+        if (record.plan) {
+          return `${record.plan.planName} - Q${record.plan.cost}`;
+        }
+        return 'Sin plan';
+      }
+    },
+    {
+      title: 'Fecha de Vencimiento',
+      dataIndex: 'renewalDate',
+      key: 'renewalDate',
+      render: (date) => {
+        const renewalDate = dayjs(date);
+        const today = dayjs();
+        const daysOverdue = today.diff(renewalDate, 'days');
+        
+        return (
+          <Tag color="red">
+            {renewalDate.format('DD/MM/YYYY')}
+            <br />
+            <small>({daysOverdue} días vencida)</small>
+          </Tag>
+        );
+      }
+    }
+  ];
+
   if (loading) {
     return (
       <div style={{ padding: '24px', textAlign: 'center' }}>
@@ -194,9 +257,16 @@ export default function Dashboard() {
               prefix={<PhoneOutlined />}
               valueStyle={{ color: '#52c41a' }}
               suffix={
-                <Text type="secondary" style={{ fontSize: '14px' }}>
-                  ({stats.activeLines} activas)
-                </Text>
+                <div style={{ fontSize: '12px', lineHeight: '1.2' }}>
+                  <Text type="secondary" style={{ display: 'block' }}>
+                    {stats.activeLines} activas
+                  </Text>
+                  {stats.expiredLines.length > 0 && (
+                    <Text style={{ color: '#ff4d4f', fontWeight: 'bold', display: 'block' }}>
+                      {stats.expiredLines.length} vencidas
+                    </Text>
+                  )}
+                </div>
               }
             />
           </Card>
@@ -227,6 +297,71 @@ export default function Dashboard() {
 
       {/* Alertas y Renovaciones */}
       <Row gutter={[16, 16]}>
+        {/* Alerta de líneas vencidas */}
+        <Col xs={24} lg={8}>
+          <Card 
+            title={
+              <span>
+                <WarningOutlined style={{ marginRight: 8, color: '#ff4d4f' }} />
+                Líneas Vencidas
+              </span>
+            }
+            extra={
+              <Tag color={stats.expiredLines.length > 0 ? 'red' : 'green'}>
+                {stats.expiredLines.length} líneas
+              </Tag>
+            }
+          >
+            {stats.expiredLines.length > 0 ? (
+              <List
+                size="small"
+                dataSource={stats.expiredLines.slice(0, 5)}
+                renderItem={(item) => {
+                  const daysOverdue = dayjs().diff(dayjs(item.renewalDate), 'days');
+                  return (
+                    <List.Item>
+                      <List.Item.Meta
+                        avatar={
+                          <Avatar 
+                            icon={<WarningOutlined />} 
+                            size="small"
+                            style={{ backgroundColor: '#ff4d4f' }}
+                          />
+                        }
+                        title={<Text style={{ color: '#ff4d4f' }}>{item.lineNumber}</Text>}
+                        description={
+                          <div>
+                            <Text type="secondary">
+                              {item.user ? `${item.user.firstName} ${item.user.lastName}` : 'Sin usuario'}
+                            </Text>
+                            <br />
+                            <Text strong style={{ color: '#ff4d4f' }}>
+                              {daysOverdue} días vencida
+                            </Text>
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <CheckCircleOutlined style={{ fontSize: '24px', color: '#52c41a', marginBottom: '8px' }} />
+                <div>No hay líneas vencidas</div>
+                <Text type="secondary">Todas las renovaciones están al día</Text>
+              </div>
+            )}
+            {stats.expiredLines.length > 5 && (
+              <div style={{ textAlign: 'center', marginTop: 8 }}>
+                <Text type="secondary">
+                  +{stats.expiredLines.length - 5} líneas más
+                </Text>
+              </div>
+            )}
+          </Card>
+        </Col>
+
         {/* Alerta de renovaciones próximas */}
         <Col xs={24} lg={8}>
           <Card 
@@ -304,6 +439,22 @@ export default function Dashboard() {
               </span>
             }
           >
+            {/* Progreso de líneas vencidas - más crítico, se muestra primero */}
+            {stats.expiredLines.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <Text style={{ color: '#ff4d4f', fontWeight: 'bold' }}>Líneas Vencidas (Crítico)</Text>
+                <Progress 
+                  percent={stats.totalLines > 0 ? Math.round((stats.expiredLines.length / stats.totalLines) * 100) : 0}
+                  status="exception"
+                  strokeColor="#ff4d4f"
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                  <Text style={{ color: '#ff4d4f', fontWeight: 'bold' }}>{stats.expiredLines.length} vencidas</Text>
+                  <Text type="secondary">{stats.totalLines - stats.expiredLines.length} al día</Text>
+                </div>
+              </div>
+            )}
+            
             <div style={{ marginBottom: 16 }}>
               <Text>Líneas Activas</Text>
               <Progress 
@@ -368,12 +519,33 @@ export default function Dashboard() {
         </Col>
       </Row>
 
+      {/* Tabla detallada de líneas vencidas */}
+      {stats.expiredLines.length > 0 && (
+        <Card 
+          title={
+            <span>
+              <WarningOutlined style={{ marginRight: 8, color: '#ff4d4f' }} />
+              Líneas Vencidas - Acción Requerida
+            </span>
+          }
+          style={{ marginTop: 16 }}
+        >
+          <Table
+            columns={expiredColumns}
+            dataSource={stats.expiredLines}
+            rowKey="id"
+            pagination={{ pageSize: 10 }}
+            size="small"
+          />
+        </Card>
+      )}
+
       {/* Tabla detallada de renovaciones próximas */}
       {stats.upcomingRenewals.length > 0 && (
         <Card 
           title={
             <span>
-              <WarningOutlined style={{ marginRight: 8, color: '#faad14' }} />
+              <ClockCircleOutlined style={{ marginRight: 8, color: '#faad14' }} />
               Detalle de Renovaciones Próximas (90 días)
             </span>
           }
